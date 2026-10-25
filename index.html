@@ -893,9 +893,26 @@
     mainLight.shadow.normalBias = 0.02;
     scene.add(mainLight);
 
-    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.42);
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.72);
     rimLight.position.set(-28, 18, -22);
     scene.add(rimLight);
+
+    // 3rd Directional Light: Warm Rose-Gold Subsurface / Canopy Backlight for multi-layered chromatic depth
+    const subsurfaceLight = new THREE.DirectionalLight(0xfda4af, 0.52);
+    subsurfaceLight.position.set(-12, 11, -30);
+    scene.add(subsurfaceLight);
+
+    // Spatial Atmospheric Accent & Bounce Lights (Golden Sun-Pools, Cool River Bounce, Sakura Warm Glow)
+    const dayAccentLights = [
+      { light: new THREE.PointLight(0xfde047, 1.35, 19), pos: [0, 5.2, -9.5], baseInt: 1.35 },
+      { light: new THREE.PointLight(0x22d3ee, 1.15, 18), pos: [9.5, 3.2, -2.5], baseInt: 1.15 },
+      { light: new THREE.PointLight(0xfb7185, 1.10, 17), pos: [-6.5, 4.5, 4.5], baseInt: 1.10 },
+      { light: new THREE.PointLight(0xfbbf24, 1.25, 18), pos: [8.8, 4.2, 0.5], baseInt: 1.25 }
+    ];
+    dayAccentLights.forEach(item => {
+      item.light.position.set(...item.pos);
+      scene.add(item.light);
+    });
 
     // Volumetric Sun / Moon God-Ray Light Shafts (Tyndall Light Scattering Beams)
     const godRayGroup = new THREE.Group();
@@ -903,7 +920,8 @@
     const godRayUniforms = {
       uTime: { value: 0.0 },
       uRayColor: { value: new THREE.Color(0xfdba74) },
-      uIntensity: { value: 0.36 }
+      uSecondaryColor: { value: new THREE.Color(0xf472b6) },
+      uIntensity: { value: 0.44 }
     };
     const godRayMat = new THREE.ShaderMaterial({
       uniforms: godRayUniforms,
@@ -921,16 +939,19 @@
       fragmentShader: `
         uniform float uTime;
         uniform vec3 uRayColor;
+        uniform vec3 uSecondaryColor;
         uniform float uIntensity;
         varying vec2 vUv;
         void main() {
-          // Soft horizontal gaussian beam + vertical atmospheric scattering fade
+          // Soft horizontal gaussian beam + vertical atmospheric scattering fade + chromatic core gradient
           float radial = sin(vUv.x * 3.14159265);
-          radial = pow(max(0.0, radial), 1.8);
-          float verticalFade = smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.15, vUv.y);
-          float shimmer = 0.82 + 0.18 * sin(vUv.x * 18.0 + uTime * 0.9);
+          radial = pow(max(0.0, radial), 1.65);
+          float verticalFade = smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.12, vUv.y);
+          float shimmer = 0.78 + 0.22 * sin(vUv.x * 22.0 + uTime * 1.1) * cos(vUv.y * 14.0 - uTime * 0.7);
+          vec3 beamCol = mix(uSecondaryColor, uRayColor, smoothstep(0.15, 0.85, radial));
+          beamCol = mix(beamCol, vec3(1.0, 0.99, 0.90), pow(radial, 3.2) * 0.55);
           float alpha = radial * verticalFade * shimmer * uIntensity;
-          gl_FragColor = vec4(uRayColor, alpha);
+          gl_FragColor = vec4(beamCol, alpha);
         }
       `
     });
@@ -955,9 +976,10 @@
     /* =======================================================================
        4. Uneven 3D Terrain, Sculpted Cobblestones & Recessed Wet Puddles
        ======================================================================= */
-    // 4.1 3D Uneven Rolling Grass Terrain (with vertex displacement outside paths)
+    // 4.1 3D Uneven Rolling Grass Terrain (with vertex displacement & multi-zone chromatic vertex colors)
     const groundGeo = new THREE.PlaneGeometry(120, 120, 96, 96);
     const gPos = groundGeo.attributes.position;
+    const gColors = new Float32Array(gPos.count * 3);
     for (let i = 0; i < gPos.count; i++) {
       const vx = gPos.getX(i);
       const vy = gPos.getY(i); // maps to world -Z after -PI/2 rotation
@@ -973,20 +995,94 @@
       } else if (onRiver) {
         gPos.setZ(i, -0.35); // carved riverbed depression!
       }
+
+      // Multi-tone chromatic vertex coloring to break up flat green uniformity:
+      // Warm golden-chartreuse on sun-facing clearings, cool teal-indigo in forest shade, warm rose-gold near Sakura sanctuary
+      const sunFacing = Math.max(-1, Math.min(1, (vx * 0.7 + wz * 0.5) / 22.0));
+      const dapple = Math.sin(vx * 0.38) * Math.cos(wz * 0.38) * 0.5 + Math.sin(vx * 0.85 - wz * 0.65) * 0.5;
+      let r = 0.88 + sunFacing * 0.20 + dapple * 0.14;
+      let g = 0.96 + sunFacing * 0.10 + dapple * 0.10;
+      let b = 0.82 - sunFacing * 0.12 + (1.0 - dapple) * 0.14;
+      if (onRiver) {
+        r *= 0.65; g *= 1.05; b *= 1.15; // cool emerald-aqua riverbank moss
+      } else if (distCenter < 15.0 && wz < 2.0) {
+        r *= 1.12; g *= 0.98; b *= 0.96; // warm sunlit sanctuary clearing
+      }
+      gColors[i * 3] = Math.max(0.42, Math.min(1.28, r));
+      gColors[i * 3 + 1] = Math.max(0.52, Math.min(1.25, g));
+      gColors[i * 3 + 2] = Math.max(0.45, Math.min(1.25, b));
     }
+    groundGeo.setAttribute('color', new THREE.BufferAttribute(gColors, 3));
     groundGeo.computeVertexNormals();
 
     const groundMat = new THREE.MeshStandardMaterial({
       map: grassTerrainPBR.map,
       normalMap: grassTerrainPBR.normalMap,
       normalScale: new THREE.Vector2(1.4, 1.4),
-      roughness: 0.78,
+      vertexColors: true,
+      roughness: 0.76,
       metalness: 0.05
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
+
+    // 4.1b Dynamic Komorebi (木漏れ日) Dappled Sunlight & Drifting Cloud Shadows Layer
+    const komorebiUniforms = {
+      uTime: { value: 0.0 },
+      uSunStrength: { value: 1.0 },
+      uWarmColor: { value: new THREE.Color(0xfef08a) },
+      uShadowColor: { value: new THREE.Color(0x0f172a) }
+    };
+    const komorebiMat = new THREE.ShaderMaterial({
+      uniforms: komorebiUniforms,
+      transparent: true,
+      depthWrite: false,
+      vertexShader: `
+        varying vec3 vWorldPos;
+        void main() {
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform float uSunStrength;
+        uniform vec3 uWarmColor;
+        uniform vec3 uShadowColor;
+        varying vec3 vWorldPos;
+
+        void main() {
+          vec2 p = vWorldPos.xz;
+          float dist = length(p);
+          float edgeFade = 1.0 - smoothstep(24.0, 38.0, dist);
+          if (edgeFade <= 0.01 || uSunStrength <= 0.02) discard;
+
+          // Slowly drifting atmospheric cloud shadows (large scale)
+          vec2 cloudUv = p * 0.085 + vec2(uTime * 0.018, uTime * 0.011);
+          float cloudNoise = sin(cloudUv.x * 3.2 + cos(cloudUv.y * 2.7)) * 0.5
+                           + cos(cloudUv.y * 4.1 - sin(cloudUv.x * 3.5)) * 0.5;
+
+          // Komorebi leaf-filtered dappled golden light spots (medium/fine scale)
+          vec2 dappleUv = p * 0.58 + vec2(sin(uTime * 0.45) * 0.18, cos(uTime * 0.38) * 0.18);
+          float dapple = sin(dappleUv.x * 3.8 + cos(dappleUv.y * 4.2))
+                       * cos(dappleUv.y * 3.6 - sin(dappleUv.x * 3.9));
+
+          float sunSpot = smoothstep(0.22, 0.78, dapple) * smoothstep(-0.2, 0.65, cloudNoise);
+          float cloudShade = smoothstep(0.18, 0.78, -cloudNoise);
+
+          vec3 col = mix(uShadowColor, uWarmColor, sunSpot > cloudShade ? 1.0 : 0.0);
+          float alpha = max(sunSpot * 0.24, cloudShade * 0.28) * edgeFade * uSunStrength;
+          gl_FragColor = vec4(col, alpha);
+        }
+      `
+    });
+    const komorebiMesh = new THREE.Mesh(new THREE.PlaneGeometry(78, 78, 1, 1), komorebiMat);
+    komorebiMesh.rotation.x = -Math.PI / 2;
+    komorebiMesh.position.y = 0.098;
+    scene.add(komorebiMesh);
 
     // 4.2 High-Detail 3D Cobblestone Roads & Plaza (Normal + Roughness Mapped)
     function makeCobbleMat(rx, ry) {
@@ -1538,10 +1634,16 @@
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
-      roughness: 0.55,
+      roughness: 0.52,
       metalness: 0.02,
       emissive: 0x9f1239,
-      emissiveIntensity: 0.12
+      emissiveIntensity: 0.14
+    });
+
+    const sakuraDepthMat = new THREE.MeshDepthMaterial({
+      depthPacking: THREE.RGBADepthPacking,
+      map: sakuraSprigTex,
+      alphaTest: 0.20
     });
 
     const pineFoliageMat = new THREE.MeshStandardMaterial({
@@ -1549,8 +1651,14 @@
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
-      roughness: 0.65,
+      roughness: 0.62,
       metalness: 0.05
+    });
+
+    const pineDepthMat = new THREE.MeshDepthMaterial({
+      depthPacking: THREE.RGBADepthPacking,
+      map: pineBranchTex,
+      alphaTest: 0.20
     });
 
     const treeCanopies = [];
@@ -1575,8 +1683,22 @@
       const group = new THREE.Group();
       const myTrunkMat = trunkPBRMat.clone();
       myTrunkMat.transparent = true;
-      const myFoliageMat = sakuraFoliageMat.clone();
-      myFoliageMat.transparent = true;
+
+      // 3-Tier Volumetric Canopy Materials (Warm Sunlit Crown / Mid Blossom / Cool Berry-Violet Shade)
+      const matSunCrown = sakuraFoliageMat.clone();
+      matSunCrown.color.setHex(0xfffbeb); // warm golden-peach sunlit crown
+      matSunCrown.emissive.setHex(0xfda4af);
+      matSunCrown.emissiveIntensity = 0.26;
+
+      const matMidCanopy = sakuraFoliageMat.clone();
+      matMidCanopy.color.setHex(0xfbcfe8); // vibrant sakura rose
+      matMidCanopy.emissive.setHex(0xdb2777);
+      matMidCanopy.emissiveIntensity = 0.14;
+
+      const matCoolShade = sakuraFoliageMat.clone();
+      matCoolShade.color.setHex(0x9d174d); // cool deep berry-violet lower/back shade
+      matCoolShade.emissive.setHex(0x4c0519);
+      matCoolShade.emissiveIntensity = 0.06;
 
       // 1. Flared organic root buttresses (5 roots gripping the ground)
       for (let r = 0; r < 5; r++) {
@@ -1619,9 +1741,14 @@
             const cy = pt[1] + 0.25 + (c % 3) * 0.32;
             const cz = pt[2] + Math.sin(ca) * rad;
 
+            // Directional sun-axis score: upper & sun-facing (+X/+Z) gets warm golden crown, lower/back gets cool shade
+            const sunScore = cx * 0.45 + (cy - 3.8) * 0.85 + cz * 0.35;
+            const tierMat = sunScore > 0.55 ? matSunCrown : (sunScore < -0.25 ? matCoolShade : matMidCanopy);
+
             // 3 intersecting planes per bouquet so it has full 3D volume from every camera zoom/orbit angle!
             for (let planeIdx = 0; planeIdx < 3; planeIdx++) {
-              const card = new THREE.Mesh(clusterPlaneGeo, myFoliageMat);
+              const card = new THREE.Mesh(clusterPlaneGeo, tierMat);
+              card.customDepthMaterial = sakuraDepthMat;
               card.position.set(cx, cy, cz);
               card.rotation.set(
                 (Math.sin(c + planeIdx) * 0.45),
@@ -1641,7 +1768,7 @@
       treeCanopies.push({ mesh: canopyGroup, phase: x * 0.3 + z * 0.5 });
       occludableObjects.push({
         type: 'tree', group, x, z, radius: 3.6 * scale,
-        materials: [myTrunkMat, myFoliageMat], currentAlpha: 1.0
+        materials: [myTrunkMat, matSunCrown, matMidCanopy, matCoolShade], currentAlpha: 1.0
       });
 
       group.position.set(x, 0, z);
@@ -1654,8 +1781,19 @@
       const group = new THREE.Group();
       const myTrunkMat = trunkPBRMat.clone();
       myTrunkMat.transparent = true;
-      const myPineMat = pineFoliageMat.clone();
-      myPineMat.transparent = true;
+
+      // 3-Tier Pine Needles (Sunlit Golden-Chartreuse Top / Emerald Mid / Deep Indigo-Pine Shade)
+      const pineTopMat = pineFoliageMat.clone();
+      pineTopMat.color.setHex(0xd9f99d);
+      pineTopMat.emissive.setHex(0x4d7c0f);
+      pineTopMat.emissiveIntensity = 0.16;
+
+      const pineMidMat = pineFoliageMat.clone();
+      pineMidMat.color.setHex(0x6ee7b7);
+
+      const pineLowMat = pineFoliageMat.clone();
+      pineLowMat.color.setHex(0x064e3b);
+
       addBranchSegment(group, 0, 0, 0, 0, 4.2, 0, 0.42, 0.12, myTrunkMat);
 
       const canopyGroup = new THREE.Group();
@@ -1671,8 +1809,13 @@
       tiers.forEach((t, tIdx) => {
         for (let i = 0; i < t.cards; i++) {
           const a = (i / t.cards) * Math.PI * 2 + tIdx * 0.5;
-          const card = new THREE.Mesh(pineCardGeo, myPineMat);
-          card.position.set(Math.cos(a) * (t.r * 0.55), t.y, Math.sin(a) * (t.r * 0.55));
+          const px = Math.cos(a) * (t.r * 0.55);
+          const pz = Math.sin(a) * (t.r * 0.55);
+          const sunScore = px * 0.5 + (tIdx - 1.8) * 0.55 + pz * 0.35;
+          const pMat = sunScore > 0.45 ? pineTopMat : (sunScore < -0.25 ? pineLowMat : pineMidMat);
+          const card = new THREE.Mesh(pineCardGeo, pMat);
+          card.customDepthMaterial = pineDepthMat;
+          card.position.set(px, t.y, pz);
           card.rotation.order = 'YXZ';
           card.rotation.y = -a + Math.PI / 2;
           card.rotation.x = 0.62; // Drooping layered pine boughs
@@ -1685,7 +1828,7 @@
       treeCanopies.push({ mesh: canopyGroup, phase: x * 0.5 - z * 0.3 });
       occludableObjects.push({
         type: 'tree', group, x, z, radius: 3.0 * scale,
-        materials: [myTrunkMat, myPineMat], currentAlpha: 1.0
+        materials: [myTrunkMat, pineTopMat, pineMidMat, pineLowMat], currentAlpha: 1.0
       });
       group.position.set(x, 0, z);
       group.scale.set(scale, scale, scale);
@@ -2532,39 +2675,47 @@
     const timeConfigs = {
       dawn: {
         bg: 0x3b2d54, fog: 0x583c63,
-        hemiSky: 0xfbcfe8, hemiGround: 0x1e1b4b, hemiInt: 0.34,
-        sunColor: 0xf472b6, sunInt: 1.65, sunPos: [28, 17, 18],
-        rimColor: 0x38bdf8, rimInt: 0.45,
+        hemiSky: 0xfbcfe8, hemiGround: 0x1e1b4b, hemiInt: 0.28,
+        sunColor: 0xf472b6, sunInt: 1.85, sunPos: [29, 15.5, 19],
+        rimColor: 0x38bdf8, rimInt: 0.68,
+        subColor: 0xfde047, subInt: 0.48,
         exposure: 0.92, lanternInt: 0.85, winInt: 0.65, fireflyOp: 0.35,
         waterShallow: 0x14b8a6, waterDeep: 0x0c1938, waterSky: 0xd946ef,
-        rayColor: 0xf472b6, rayInt: 0.38
+        rayColor: 0xf472b6, raySecColor: 0xfde047, rayInt: 0.46,
+        komorebiStrength: 0.85, accentMult: 1.0
       },
       day: {
-        bg: 0x60a5fa, fog: 0x93c5fd,
-        hemiSky: 0xe0f2fe, hemiGround: 0x14532d, hemiInt: 0.38,
-        sunColor: 0xfffbeb, sunInt: 1.78, sunPos: [25, 32, 18],
-        rimColor: 0x38bdf8, rimInt: 0.32,
-        exposure: 0.88, lanternInt: 0.0, winInt: 0.1, fireflyOp: 0.0,
+        bg: 0x3b82f6, fog: 0x7dd3fc,
+        hemiSky: 0x38bdf8, hemiGround: 0x062019, hemiInt: 0.24,
+        sunColor: 0xffdfa0, sunInt: 2.15, sunPos: [30, 15.5, 20],
+        rimColor: 0x0ea5e9, rimInt: 0.85,
+        subColor: 0xf472b6, subInt: 0.58,
+        exposure: 0.90, lanternInt: 0.25, winInt: 0.15, fireflyOp: 0.0,
         waterShallow: 0x0d9488, waterDeep: 0x082f49, waterSky: 0x38bdf8,
-        rayColor: 0xfef08a, rayInt: 0.34
+        rayColor: 0xfde047, raySecColor: 0xfb923c, rayInt: 0.52,
+        komorebiStrength: 1.15, accentMult: 1.35
       },
       dusk: {
         bg: 0x1e1b4b, fog: 0x311042,
-        hemiSky: 0xfde68a, hemiGround: 0x0f172a, hemiInt: 0.34,
-        sunColor: 0xfb923c, sunInt: 1.82, sunPos: [28, 15, 20],
-        rimColor: 0x38bdf8, rimInt: 0.48,
+        hemiSky: 0xfde68a, hemiGround: 0x0f172a, hemiInt: 0.28,
+        sunColor: 0xfb923c, sunInt: 1.95, sunPos: [29, 14.5, 20],
+        rimColor: 0x38bdf8, rimInt: 0.62,
+        subColor: 0xe879f9, subInt: 0.52,
         exposure: 0.92, lanternInt: 1.45, winInt: 1.25, fireflyOp: 0.75,
         waterShallow: 0x0d9488, waterDeep: 0x0f172a, waterSky: 0xf97316,
-        rayColor: 0xfb923c, rayInt: 0.42
+        rayColor: 0xfb923c, raySecColor: 0xf43f5e, rayInt: 0.48,
+        komorebiStrength: 0.90, accentMult: 1.10
       },
       night: {
         bg: 0x060b16, fog: 0x091020,
-        hemiSky: 0x38bdf8, hemiGround: 0x020617, hemiInt: 0.26,
-        sunColor: 0x60a5fa, sunInt: 1.15, sunPos: [-24, 28, -16],
-        rimColor: 0x818cf8, rimInt: 0.58,
+        hemiSky: 0x38bdf8, hemiGround: 0x020617, hemiInt: 0.22,
+        sunColor: 0x60a5fa, sunInt: 1.25, sunPos: [-24, 24, -16],
+        rimColor: 0x818cf8, rimInt: 0.65,
+        subColor: 0x2dd4bf, subInt: 0.35,
         exposure: 0.95, lanternInt: 2.15, winInt: 1.65, fireflyOp: 0.95,
         waterShallow: 0x0d9488, waterDeep: 0x020617, waterSky: 0x1d4ed8,
-        rayColor: 0x60a5fa, rayInt: 0.25
+        rayColor: 0x60a5fa, raySecColor: 0x818cf8, rayInt: 0.28,
+        komorebiStrength: 0.35, accentMult: 0.55
       }
     };
 
@@ -2597,6 +2748,11 @@
 
       rimLight.color.setHex(cfg.rimColor);
       rimLight.intensity = cfg.rimInt;
+      subsurfaceLight.color.setHex(cfg.subColor || 0xf472b6);
+      subsurfaceLight.intensity = cfg.subInt || 0.48;
+      dayAccentLights.forEach(item => {
+        item.light.intensity = item.baseInt * (cfg.accentMult || 1.0);
+      });
       renderer.toneMappingExposure = cfg.exposure;
 
       lanternLights.forEach(l => l.intensity = cfg.lanternInt);
@@ -2611,13 +2767,19 @@
       waterUniforms.uSunColor.value.setHex(cfg.sunColor);
       waterUniforms.uSunDir.value.set(...cfg.sunPos).normalize();
 
-      // Update Volumetric God-Ray Scattering Shafts direction & color
+      // Update Volumetric God-Ray Scattering Shafts direction & multi-color gradient
       godRayUniforms.uRayColor.value.setHex(cfg.rayColor || cfg.sunColor);
+      godRayUniforms.uSecondaryColor.value.setHex(cfg.raySecColor || cfg.rimColor);
       const isRaining = currentWeather === 'rain' || currentWeather === 'thunder';
       godRayUniforms.uIntensity.value = isRaining ? (cfg.rayInt || 0.35) * 0.35 : (cfg.rayInt || 0.35);
       const sDir = new THREE.Vector3(...cfg.sunPos).normalize();
       const beamQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), sDir);
       godRayShafts.forEach(cone => cone.quaternion.copy(beamQuat));
+
+      // Update Komorebi Dappled Sunlight & Cloud Shadows Layer
+      komorebiUniforms.uWarmColor.value.setHex(cfg.rayColor || cfg.sunColor);
+      komorebiUniforms.uShadowColor.value.setHex(cfg.hemiGround);
+      komorebiUniforms.uSunStrength.value = isRaining ? (cfg.komorebiStrength || 0.8) * 0.25 : (cfg.komorebiStrength || 0.8);
 
       puddleShaderUniforms.uSkyColor.value.setHex(cfg.waterSky);
       puddleShaderUniforms.uLightColor.value.setHex(cfg.sunColor);
@@ -2863,15 +3025,13 @@
     window.petGoldenDog = function() {
       const dist = Math.hypot(player.position.x - companionDog.group.position.x, player.position.z - companionDog.group.position.z);
       if (dist > 2.2) {
-        pendingDogPet = true;
         targetPos.set(companionDog.group.position.x + 0.85, 0, companionDog.group.position.z + 0.85);
         targetRing.position.set(targetPos.x, 0.11, targetPos.z);
         targetRing.material.color.setHex(0xfbbf24);
         isMoving = true;
-        return;
       }
       pendingDogPet = false;
-      companionDog.excitedTimer = 3.2;
+      companionDog.excitedTimer = 3.5;
       playDogBarkSound();
       window.triggerEmote('🐕 汪汪！豆豆開心地搖尾巴 ❤️');
       window.triggerHaptics([85, 45, 130, 45, 95], 0.75, 0.9, 360, '📳 摸摸豆豆・手把與手機震動回饋中！');
@@ -2924,19 +3084,38 @@
       joyZone.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
         joyActive = true;
-        joyZone.setPointerCapture(e.pointerId);
+        try { if (joyZone.setPointerCapture) joyZone.setPointerCapture(e.pointerId); } catch (err) {}
         updateJoystickKnob(e.clientX, e.clientY);
       });
-      joyZone.addEventListener('pointermove', (e) => {
+      const onJoyMove = (e) => {
         if (!joyActive) return;
         e.stopPropagation();
         updateJoystickKnob(e.clientX, e.clientY);
-      });
-      joyZone.addEventListener('pointerup', (e) => {
-        e.stopPropagation();
+      };
+      const onJoyEnd = () => {
+        if (!joyActive) return;
         resetJoystickKnob();
-      });
-      joyZone.addEventListener('pointercancel', resetJoystickKnob);
+      };
+      joyZone.addEventListener('pointermove', onJoyMove);
+      window.addEventListener('pointermove', onJoyMove);
+      joyZone.addEventListener('pointerup', onJoyEnd);
+      window.addEventListener('pointerup', onJoyEnd);
+      joyZone.addEventListener('pointercancel', onJoyEnd);
+      window.addEventListener('pointercancel', onJoyEnd);
+
+      // Explicit Touch Events fallback for mobile browsers (iOS Safari / Android WebView)
+      joyZone.addEventListener('touchstart', (e) => {
+        if (!e.touches.length) return;
+        e.stopPropagation();
+        joyActive = true;
+        updateJoystickKnob(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+      window.addEventListener('touchmove', (e) => {
+        if (!joyActive || !e.touches.length) return;
+        updateJoystickKnob(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+      window.addEventListener('touchend', onJoyEnd, { passive: true });
+      window.addEventListener('touchcancel', onJoyEnd, { passive: true });
     }
 
     window.undoLastBuild = function() {
@@ -3272,15 +3451,46 @@
 
     applyEnvironment();
 
+    // Expose Automated CI/CD Diagnostic & E2E Inspection Hook
+    window.__REIEN_DIAG__ = {
+      getState: () => ({
+        timeOfDay: currentTimeOfDay,
+        weather: currentWeather,
+        playerPos: { x: player.position.x, y: player.position.y, z: player.position.z },
+        dogPos: companionDog ? { x: companionDog.group.position.x, z: companionDog.group.position.z, excitedTimer: companionDog.excitedTimer } : null,
+        lights: {
+          mainInt: mainLight.intensity,
+          mainColor: mainLight.color.getHex(),
+          hemiInt: hemiLight.intensity,
+          rimInt: rimLight.intensity,
+          subInt: subsurfaceLight.intensity,
+          accentCount: dayAccentLights.length,
+          shadowMapSize: mainLight.shadow.mapSize.width,
+          godRayInt: godRayUniforms.uIntensity.value,
+          komorebiStrength: komorebiUniforms.uSunStrength.value
+        },
+        occludablesCount: occludableObjects.length,
+        minOccludableAlpha: Math.min(...occludableObjects.map(o => o.currentAlpha)),
+        monumentsCount: monuments.length,
+        isBuildMode: buildMode
+      }),
+      teleportPlayer: (x, z) => {
+        isMoving = false;
+        player.position.set(x, 0, z);
+        targetPos.set(x, 0, z);
+      }
+    };
+
     function animate() {
       requestAnimationFrame(animate);
       const dt = clock.getDelta();
       const t = clock.getElapsedTime();
 
-      // Update GLSL Water, Puddle & Volumetric God-Ray Shaders
+      // Update GLSL Water, Puddle, Komorebi & Volumetric God-Ray Shaders
       waterUniforms.uTime.value = t;
       puddleShaderUniforms.uTime.value = t;
       godRayUniforms.uTime.value = t;
+      komorebiUniforms.uTime.value = t;
 
       // Center crystal & monument animation
       centerCrystal.rotation.y = t * 0.75;
