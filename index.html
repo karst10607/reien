@@ -285,6 +285,36 @@
     }
     #gamepad-banner.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
+    /* Gamepad Diagnostic Console */
+    .diag-status-card {
+      background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 14px; padding: 14px; margin-bottom: 12px;
+    }
+    .diag-badge-online {
+      display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px;
+      border-radius: 999px; font-size: 11px; font-weight: 700;
+      background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981;
+    }
+    .diag-badge-waiting {
+      display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px;
+      border-radius: 999px; font-size: 11px; font-weight: 700;
+      background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b;
+      animation: pulse-dot 1.5s infinite;
+    }
+    .diag-key-val {
+      display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: #cbd5e1;
+    }
+    .diag-btn-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px;
+    }
+    .diag-btn-indicator {
+      background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px; padding: 4px; font-size: 10px; text-align: center; color: #94a3b8;
+    }
+    .diag-btn-indicator.active {
+      background: #0284c7; color: #fff; border-color: #38bdf8; box-shadow: 0 0 10px #0284c7;
+    }
+
     /* Responsive Mobile Portrait & Landscape Layout (Zero UI Obstruction) */
     @media (max-width: 920px), (max-height: 540px) {
       #joystick-zone { display: flex; }
@@ -488,6 +518,38 @@
             <button class="submit-msg-btn" onclick="submitGuestbookMessage()">傳遞這份思念 🕊️</button>
           </div>
           <div class="messages-list" id="guestbook-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="gamepad-diag-modal" class="modal-overlay" onclick="onDiagModalOverlayClick(event)">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <button class="modal-close" onclick="closeGamepadDiagModal()">✕</button>
+        <div class="modal-title">🎮 遊戲手把與震動即時診斷儀</div>
+        <div class="modal-desc">即時檢測 USB 有線 / 藍牙手把連線狀態、雙馬達 (Dual-Rumble) 驅動與即時按鍵</div>
+      </div>
+      <div class="modal-body">
+        <div id="diag-connection-box" class="diag-status-card">
+          <!-- Live filled by updateGamepadDiagnostics() -->
+        </div>
+
+        <div style="margin: 12px 0; display: flex; flex-direction: column; gap: 8px;">
+          <button id="btn-force-rumble" class="action-gift-btn" onclick="triggerDirectGamepadRumble()" style="background: linear-gradient(135deg, #0284c7, #38bdf8); justify-content: center; font-weight: 700;">
+            <span class="gift-icon">⚡</span>
+            <span>發送強烈雙馬達震動 (Dual-Rumble Test)</span>
+          </button>
+          <div id="diag-rumble-result" style="font-size: 11.5px; color: #94a3b8; text-align: center; min-height: 20px;"></div>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 12px;">
+          <div style="font-weight: 700; color: #e2e8f0; font-size: 12px; margin-bottom: 6px;">💡 USB 手把若無反應或無震動排查指南：</div>
+          <ol style="font-size: 11px; color: #94a3b8; line-height: 1.6; padding-left: 18px; margin: 0;">
+            <li><strong>按任意鍵喚醒連線</strong>：瀏覽器隱私防指紋保護規定，插入 USB 後<strong>必須在手把上按壓任意按鍵</strong>（如 A/X 鍵），瀏覽器才會對網頁正式廣播手把連線。</li>
+            <li><strong>關閉 Steam / 背景控制器軟體</strong>：若背景啟動著 Steam，Steam 的「Steam Input」會獨佔鎖定 USB 手把硬體，導致瀏覽器能收到搖桿座標卻無法下發震動。請於工作列完全關閉 Steam 再測試。</li>
+            <li><strong>Xbox vs PlayStation 手把</strong>：Windows 原生支援 Xbox 手把 XInput 雙馬達；PS4/PS5 手把在 Windows 預設為 DirectInput，建議搭配 DS4Windows 模擬為 Xbox 手把或以藍牙連線。</li>
+          </ol>
         </div>
       </div>
     </div>
@@ -3042,10 +3104,9 @@
 
     window.triggerHaptics = function(pattern = [120, 60, 180], gpWeak = 0.65, gpStrong = 0.85, gpDuration = 320, label = '') {
       // 1. Mobile Web Vibration API (Android / supported mobile browsers)
-      let mobileVibrated = false;
       try {
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
-          mobileVibrated = navigator.vibrate(pattern);
+          navigator.vibrate(pattern);
         }
       } catch (e) {}
 
@@ -3060,12 +3121,18 @@
             const pad = pads[i];
             if (!pad) continue;
             if (pad.vibrationActuator && pad.vibrationActuator.playEffect) {
-              pad.vibrationActuator.playEffect('dual-rumble', {
+              const effectType = (pad.vibrationActuator.type === 'trigger-rumble') ? 'trigger-rumble' : 'dual-rumble';
+              const params = {
                 startDelay: 0,
                 duration: gpDuration,
                 weakMagnitude: gpWeak,
                 strongMagnitude: gpStrong
-              }).catch(() => {});
+              };
+              if (effectType === 'trigger-rumble') {
+                params.leftTrigger = gpStrong;
+                params.rightTrigger = gpStrong;
+              }
+              pad.vibrationActuator.playEffect(effectType, params).catch(() => {});
             } else if (pad.hapticActuators && pad.hapticActuators.length > 0 && pad.hapticActuators[0].pulse) {
               pad.hapticActuators[0].pulse(gpStrong, gpDuration);
             }
@@ -3089,57 +3156,125 @@
       }
     };
 
-    window.testHapticsAndGamepad = function() {
-      ensureAudioCtx();
-      const hasVibrate = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
-      let vibrateFired = false;
-      try {
-        if (hasVibrate) {
-          vibrateFired = navigator.vibrate([160, 70, 220, 80, 300]);
-        }
-      } catch (e) {}
-      playHapticAudioImpulse(280, 42);
-
-      let gamepadCount = 0;
-      let padNames = [];
-      try {
-        if (navigator.getGamepads) {
-          const pads = navigator.getGamepads();
-          for (let i = 0; i < pads.length; i++) {
-            const p = pads[i];
-            if (!p) continue;
-            gamepadCount++;
-            padNames.push(p.id.replace(/\s*\(.*?\)/g, '').substring(0, 18));
-            if (p.vibrationActuator && p.vibrationActuator.playEffect) {
-              p.vibrationActuator.playEffect('dual-rumble', {
-                startDelay: 0,
-                duration: 650,
-                weakMagnitude: 0.85,
-                strongMagnitude: 1.0
-              }).catch(() => {});
-            } else if (p.hapticActuators && p.hapticActuators[0] && p.hapticActuators[0].pulse) {
-              p.hapticActuators[0].pulse(1.0, 650);
-            }
-          }
-        }
-      } catch (e) {}
-
-      let statusMsg = '';
-      if (hasVibrate) {
-        statusMsg = '📳 Android 實體震動已觸發！(若無感請確認系統: 聲音與震動 > 觸控回饋)';
-      } else {
-        statusMsg = '🍎 iOS 聲學實體重低音震動已觸發 (Apple WebKit 限制 vibrate API)';
-      }
-      if (gamepadCount > 0) {
-        statusMsg += ` ｜ 🎮 手把雙馬達震動中: ${padNames.join(', ')}`;
-      } else {
-        statusMsg += ' ｜ 🎮 手把未偵測（支援藍牙/有線 Xbox/PS/Switch，請按手把任意鍵喚醒）';
-      }
-
-      window.triggerHaptics([140, 60, 240], 0.85, 1.0, 650, statusMsg);
-      showGamepadBanner(statusMsg);
-      return { hasVibrate, vibrateFired, gamepadCount };
+    const diagModal = document.getElementById('gamepad-diag-modal');
+    window.openGamepadDiagModal = function() {
+      if (diagModal) diagModal.classList.add('open');
+      window.triggerDirectGamepadRumble();
     };
+
+    window.closeGamepadDiagModal = function() {
+      if (diagModal) diagModal.classList.remove('open');
+    };
+
+    window.onDiagModalOverlayClick = function(e) {
+      if (e.target === diagModal) window.closeGamepadDiagModal();
+    };
+
+    window.triggerDirectGamepadRumble = function() {
+      ensureAudioCtx();
+      playHapticAudioImpulse(300, 42);
+      try { if (navigator.vibrate) navigator.vibrate([160, 70, 220, 80, 300]); } catch (e) {}
+
+      const resEl = document.getElementById('diag-rumble-result');
+      if (resEl) resEl.innerHTML = '<span style="color:#38bdf8;">⏳ 正在向手把傳輸震動指令...</span>';
+
+      let targetPad = null;
+      if (navigator.getGamepads) {
+        const pads = navigator.getGamepads();
+        for (let i = 0; i < pads.length; i++) {
+          if (pads[i]) { targetPad = pads[i]; break; }
+        }
+      }
+
+      if (!targetPad) {
+        if (resEl) resEl.innerHTML = '<span style="color:#f87171; font-weight:700;">⚠️ 尚未偵測到手把！請按一下手把上的任意按鍵（如 A 鍵）喚醒瀏覽器連線。</span>';
+        return;
+      }
+
+      if (targetPad.vibrationActuator && targetPad.vibrationActuator.playEffect) {
+        const effectType = (targetPad.vibrationActuator.type === 'trigger-rumble') ? 'trigger-rumble' : 'dual-rumble';
+        const params = {
+          startDelay: 0,
+          duration: 900,
+          weakMagnitude: 0.9,
+          strongMagnitude: 1.0
+        };
+        if (effectType === 'trigger-rumble') {
+          params.leftTrigger = 1.0;
+          params.rightTrigger = 1.0;
+        }
+        targetPad.vibrationActuator.playEffect(effectType, params)
+          .then(res => {
+            if (resEl) resEl.innerHTML = `<span style="color:#34d399; font-weight:700;">✅ 雙馬達震動指令已成功發送至【${targetPad.id.substring(0, 22)}】！結果: ${res}</span>`;
+            showGamepadBanner(`✅ 手把雙馬達震動指令發送成功 (${res})`);
+          })
+          .catch(err => {
+            if (resEl) resEl.innerHTML = `<span style="color:#f87171; font-weight:700;">❌ 震動被系統拒絕: ${err.message}</span>`;
+          });
+      } else if (targetPad.hapticActuators && targetPad.hapticActuators.length > 0 && targetPad.hapticActuators[0].pulse) {
+        targetPad.hapticActuators[0].pulse(1.0, 900);
+        if (resEl) resEl.innerHTML = `<span style="color:#34d399; font-weight:700;">✅ 已向 hapticActuators 傳送 1.0 脈衝！</span>`;
+      } else {
+        if (resEl) resEl.innerHTML = `<span style="color:#fbbf24; font-weight:700;">⚠️ 偵測到手把（${targetPad.id.substring(0, 20)}），但瀏覽器回報無震動馬達（常見於 DirectInput 舊驅動，或 Steam 背景獨佔鎖定）。</span>`;
+      }
+    };
+
+    window.testHapticsAndGamepad = function() {
+      window.openGamepadDiagModal();
+      return { modalOpened: true };
+    };
+
+    function updateGamepadDiagnosticsUI() {
+      if (!diagModal || !diagModal.classList.contains('open')) return;
+      const box = document.getElementById('diag-connection-box');
+      if (!box) return;
+
+      let pads = [];
+      try {
+        if (navigator.getGamepads) pads = Array.from(navigator.getGamepads()).filter(Boolean);
+      } catch (e) {}
+
+      if (pads.length === 0) {
+        box.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:700; color:#f8fafc;">連線狀態</span>
+            <span class="diag-badge-waiting">⚠️ 等待按鍵喚醒</span>
+          </div>
+          <div style="font-size:12px; color:#f87171; margin-top:8px; line-height:1.5;">
+            請拿起 USB 或藍牙手把，<strong>按下任意按鍵（如 A 鍵、X 鍵或十字鍵）</strong>。<br>
+            瀏覽器基於防指紋追蹤保護，必須在使用者按鍵後才會開放網頁連線。
+          </div>
+        `;
+      } else {
+        const p = pads[0];
+        const hasVibe = !!(p.vibrationActuator && p.vibrationActuator.playEffect) || !!(p.hapticActuators && p.hapticActuators.length > 0);
+        const vibeType = p.vibrationActuator ? p.vibrationActuator.type : (p.hapticActuators ? 'hapticActuator' : '無 (DirectInput/未暴露)');
+        const aBtn = p.buttons[0] ? p.buttons[0].pressed : false;
+        const bBtn = p.buttons[1] ? p.buttons[1].pressed : false;
+        const xBtn = p.buttons[2] ? p.buttons[2].pressed : false;
+        const yBtn = p.buttons[3] ? p.buttons[3].pressed : false;
+        const ax0 = p.axes[0] ? p.axes[0].toFixed(2) : '0.00';
+        const ax1 = p.axes[1] ? p.axes[1].toFixed(2) : '0.00';
+
+        box.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:700; color:#f8fafc;">已連線手把</span>
+            <span class="diag-badge-online">🟢 已連線 (${pads.length} 支)</span>
+          </div>
+          <div class="diag-key-val"><span>裝置名稱:</span><span style="color:#7dd3fc; font-weight:700;">${p.id.substring(0, 26)}</span></div>
+          <div class="diag-key-val"><span>連接通道:</span><span>Index #${p.index} (${p.mapping || 'standard'})</span></div>
+          <div class="diag-key-val"><span>震動馬達支援:</span><span style="color:${hasVibe ? '#34d399' : '#f87171'}; font-weight:700;">${hasVibe ? '✅ 支援 (' + vibeType + ')' : '❌ 瀏覽器未暴露震動'}</span></div>
+          <div class="diag-key-val"><span>左搖桿軸向 (X, Y):</span><span>${ax0}, ${ax1}</span></div>
+          <div style="font-size:11px; color:#94a3b8; margin-top:8px;">即時按鍵感應（按下手把對應按鍵會亮起）：</div>
+          <div class="diag-btn-grid">
+            <div class="diag-btn-indicator ${aBtn ? 'active' : ''}">A (摸狗): ${aBtn ? 'ON' : 'OFF'}</div>
+            <div class="diag-btn-indicator ${bBtn ? 'active' : ''}">B (祈願): ${bBtn ? 'ON' : 'OFF'}</div>
+            <div class="diag-btn-indicator ${xBtn ? 'active' : ''}">X (震動): ${xBtn ? 'ON' : 'OFF'}</div>
+            <div class="diag-btn-indicator ${yBtn ? 'active' : ''}">Y (選單): ${yBtn ? 'ON' : 'OFF'}</div>
+          </div>
+        `;
+      }
+    }
 
     window.toggleTopHUD = function() {
       const isCollapsed = document.body.classList.toggle('top-hud-collapsed');
@@ -3730,6 +3865,8 @@
           }
         }
       } catch (e) {}
+
+      updateGamepadDiagnosticsUI();
 
       if (Math.hypot(stickX, stickY) > 0.08) {
         isMoving = false;

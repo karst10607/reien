@@ -553,19 +553,18 @@ def run_browser_suite(screenshot_dir: str = None):
                     }
                 }
             }];
-            const diagResult = window.testHapticsAndGamepad();
-            const bannerVisible = document.getElementById('gamepad-banner').classList.contains('show');
+            window.testHapticsAndGamepad();
+            const modalOpen = document.getElementById('gamepad-diag-modal').classList.contains('open');
+            window.closeGamepadDiagModal();
             return {
-                gamepadCount: diagResult.gamepadCount,
-                rumbles: window.__gpRumbles,
-                bannerVisible
+                modalOpen,
+                rumbles: window.__gpRumbles
             };
         """)
-        assert_true(gp_res['gamepadCount'] >= 1, "testHapticsAndGamepad failed to count connected gamepad")
+        assert_true(gp_res['modalOpen'], "testHapticsAndGamepad failed to open gamepad diagnostic modal")
         assert_true(len(gp_res['rumbles']) >= 1, "Gamepad playEffect('dual-rumble') was not invoked")
         assert_true(gp_res['rumbles'][0]['type'] == 'dual-rumble', "Rumble effect type must be dual-rumble")
         assert_true(gp_res['rumbles'][0]['params']['strongMagnitude'] >= 0.9, "Strong rumble magnitude should be >= 0.9")
-        assert_true(gp_res['bannerVisible'], "Gamepad diagnostic banner was not shown")
         print("PASS")
 
         ws.close()
