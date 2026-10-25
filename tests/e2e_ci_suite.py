@@ -567,6 +567,44 @@ def run_browser_suite(screenshot_dir: str = None):
         assert_true(gp_res['rumbles'][0]['params']['strongMagnitude'] >= 0.9, "Strong rumble magnitude should be >= 0.9")
         print("PASS")
 
+        # -----------------------------------------------------------------
+        # TC-13: Multi-Motor Diagnostic Modes ('heavy', 'light', 'trigger') & Report Export
+        # -----------------------------------------------------------------
+        print("[TC-13] Multi-Motor Modes ('heavy', 'light', 'trigger') & Diag Export...", end=" ", flush=True)
+        modes_res = eval_js(ws, """
+            window.__modeCalls = [];
+            navigator.getGamepads = () => [{
+                id: 'Xbox One Controller (USB XInput)',
+                index: 0,
+                connected: true,
+                axes: [0, 0, 0, 0],
+                buttons: [{ pressed: false }],
+                vibrationActuator: {
+                    type: 'dual-rumble',
+                    effects: ['dual-rumble', 'trigger-rumble'],
+                    playEffect: (type, params) => {
+                        window.__modeCalls.push({ type, params });
+                        return Promise.resolve('complete');
+                    }
+                }
+            }];
+            return (async () => {
+                await window.triggerDirectGamepadRumble('heavy');
+                await window.triggerDirectGamepadRumble('light');
+                await window.triggerDirectGamepadRumble('trigger');
+                let reportExported = typeof window.copyGamepadDiagReport === 'function';
+                return {
+                    calls: window.__modeCalls,
+                    reportExported
+                };
+            })();
+        """)
+        assert_true(len(modes_res['calls']) >= 3, "Expected at least 3 mode calls for heavy, light, and trigger")
+        assert_true(modes_res['calls'][0]['params']['strongMagnitude'] >= 0.9 and modes_res['calls'][0]['params']['weakMagnitude'] == 0, "Heavy mode must have strongMagnitude 1.0, weakMagnitude 0.0")
+        assert_true(modes_res['calls'][1]['params']['strongMagnitude'] == 0 and modes_res['calls'][1]['params']['weakMagnitude'] >= 0.8, "Light mode must have strongMagnitude 0.0, weakMagnitude > 0")
+        assert_true(modes_res['reportExported'], "copyGamepadDiagReport must be defined")
+        print("PASS")
+
         ws.close()
     finally:
         proc.terminate()
@@ -581,13 +619,13 @@ def main():
 
     start_t = time.time()
     print("=" * 70)
-    print("🚀 Starting Reien 2.5D Cloud Memorial Garden CI/CD Test Suite (12 Cases)")
+    print("🚀 Starting Reien 2.5D Cloud Memorial Garden CI/CD Test Suite (13 Cases)")
     print("=" * 70)
     run_tc01_static_syntax()
     run_browser_suite(screenshot_dir=args.screenshots)
     elapsed = time.time() - start_t
     print("=" * 70)
-    print(f"✅ ALL 12 CI/CD TEST CASES PASSED IN {elapsed:.2f}s!")
+    print(f"✅ ALL 13 CI/CD TEST CASES PASSED IN {elapsed:.2f}s!")
     print("=" * 70)
 
 

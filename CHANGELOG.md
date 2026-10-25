@@ -5,6 +5,23 @@
 
 ---
 
+## [1.3.1] - 2026-10-25
+
+### 🚀 強化與改進 (Enhanced)
+* **Xbox One / 有線手把震動雙向相容性與級聯回退管線 (sendPadRumble)**：
+  * **多裝置自動掃描**：修正先前僅鎖定 pads[0] 導致多裝置或虛擬裝置（如虛擬音效卡/繪圖板/按鍵映射）環境下忽略真實 Xbox 手把的問題，自動掃描所有支援馬達之手把槽位。
+  * **級聯回退 (Cascading Fallback)**：針對不同 Chromium 版本與 Windows Gaming Input (WGI) 實作差異，依序嘗試 dual-rumble、	rigger-rumble（注入 leftTrigger / 
+ightTrigger 參數）以及 ctuator.type，徹底消除參數型態不匹配或 enum 拒絕拋錯。
+  * **預清空機制**：呼叫 ctuator.reset() 預先清除懸空震動狀態，防止因搶佔 (preemption) 導致馬達無動作。
+* **手把即時診斷儀 2.0 (#gamepad-diag-modal)**：
+  * **分部馬達測試套件**：提供「雙馬達全速 (Dual-Rumble 100%)」、「左握把重錘馬達 (Heavy - 低頻)」、「右握把輕錘馬達 (Light - 高頻)」、「左右板機震動 (Xbox Triggers)」四組獨立測試按鈕。
+  * **一鍵複製完整診斷報告 (JSON)**：可一鍵將瀏覽器焦點、UserAgent、手把 Slot、Mapping、ibrationActuator 支援詳情複製至剪貼簿，直接黏貼於 GitHub Issue 中。
+  * **透明化 Promise 結果反饋**：精確標示 complete、cannot-trigger、preempted，若驅動成功但無實體動作，主動提示 Windows 系統與硬體電源排查方案。
+* **Windows & Xbox One 專屬 5 大硬體與系統排除清單**：
+  * 整合 Windows 原生驅動測試 (joy.cpl)、Xbox 配件 (Xbox Accessories)「開啟震動」設定與韌體更新、電池槽低電量鎖定保護（插 USB 時取出無電乾電池）、主機板原生 USB 供電防壓降、Chromium WGI 旗標開關。
+* **CI/CD 自動化測試擴充至 13 項**：
+  * 新增 TC-13: Multi-Motor Diagnostic Modes ('heavy', 'light', 'trigger') & Report Export，13 項測試全數 PASS。
+
 ## [1.3.0] - 2026-10-25
 
 ### ✨ 新增功能 (Added)
