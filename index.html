@@ -251,13 +251,42 @@
       box-shadow: 0 6px 16px rgba(0,0,0,0.35);
     }
 
+    /* Mobile Game Style Top HUD Collapse Button */
+    .hud-toggle-btn {
+      background: rgba(30, 41, 59, 0.72); border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #93c5fd; border-radius: 999px; padding: 4px 9px; font-size: 11px; font-weight: 700;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+      margin-left: auto; transition: all 0.2s ease; flex-shrink: 0;
+    }
+    .hud-toggle-btn:hover { background: rgba(56, 189, 248, 0.3); color: #ffffff; }
+
+    /* Collapsed Immersive Mode: Slides top controls away, freeing 100% of the 3D world */
+    body.top-hud-collapsed .top-controls { display: none !important; }
+    body.top-hud-collapsed .brand-subtitle { display: none !important; }
+    body.top-hud-collapsed .brand-card {
+      padding: 4px 10px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    }
+
+    /* Floating Gamepad Status & Diagnostic Banner */
+    #gamepad-banner {
+      position: absolute; top: 12px; left: 50%;
+      transform: translateX(-50%) translateY(-90px);
+      background: rgba(15, 23, 42, 0.94); border: 1px solid rgba(56, 189, 248, 0.55);
+      backdrop-filter: blur(14px); padding: 7px 18px; border-radius: 999px;
+      font-size: 12px; color: #f0fdf4; font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); z-index: 120;
+      pointer-events: none; opacity: 0; transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex; align-items: center; gap: 8px; white-space: nowrap;
+    }
+    #gamepad-banner.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
     /* Responsive Mobile Portrait & Landscape Layout (Zero UI Obstruction) */
     @media (max-width: 920px), (max-height: 540px) {
       #joystick-zone { display: flex; }
       .help-hint#normal-help {
-        display: none; position: absolute; bottom: 72px; left: 16px; max-width: 310px; z-index: 65;
+        display: none !important; position: absolute; bottom: 72px; left: 16px; max-width: 310px; z-index: 65;
       }
-      .help-hint#normal-help.mobile-open { display: flex; }
+      .help-hint#normal-help.mobile-open { display: flex !important; }
       .help-toggle-btn { display: flex; }
       .brand-subtitle { display: none; }
       .brand-card { padding: 6px 11px; border-radius: 13px; gap: 7px; }
@@ -301,6 +330,7 @@
   <div id="canvas-container"></div>
   <div id="lightning-overlay"></div>
   <div id="haptic-toast">📳 觸覺震動回饋</div>
+  <div id="gamepad-banner">🎮 手把連線狀態</div>
 
   <div id="joystick-zone">
     <div id="joystick-knob"></div>
@@ -318,6 +348,10 @@
             <span id="sync-status">Next-Gen PBR 凹凸法線貼圖 ‧ GLSL 景深折射水體 ‧ 滾輪縮放視角</span>
           </div>
         </div>
+        <button id="btn-top-hud-toggle" class="hud-toggle-btn" onclick="toggleTopHUD()" title="手遊沉浸模式 (收合/展開頂部面板)">
+          <span id="hud-toggle-icon">▲</span>
+          <span id="hud-toggle-text">收合</span>
+        </button>
       </div>
 
       <div class="top-controls">
@@ -354,6 +388,10 @@
           <button id="btn-sim" class="btn-glass active" onclick="toggleSimulatedVisitors()">
             <span>👥</span>
             <span id="sim-text">陪伴旅人 (開)</span>
+          </button>
+          <button id="btn-vibe-test" class="btn-glass" onclick="testHapticsAndGamepad()" title="測試手機震動與藍牙/有線手把連線狀態">
+            <span>📳</span>
+            <span id="vibe-text">震動/手把測試</span>
           </button>
           <button id="btn-joy-toggle" class="btn-glass" onclick="toggleVirtualJoystick()" title="顯示/隱藏虛擬搖桿">
             <span>🕹️</span>
@@ -2916,7 +2954,7 @@
       ghostGroup.visible = buildMode;
       const nHelp = document.getElementById('normal-help');
       const bHelp = document.getElementById('build-help');
-      if (nHelp) nHelp.style.display = buildMode ? 'none' : 'flex';
+      if (nHelp) nHelp.style.display = buildMode ? 'none' : '';
       if (bHelp) bHelp.style.display = buildMode ? 'flex' : 'none';
     };
 
@@ -2952,20 +2990,66 @@
     };
 
     /* =======================================================================
-       11.4 Haptic Vibration Engine (Mobile navigator.vibrate + Gamepad Dual-Rumble)
+       11.4 Haptic Vibration Engine (Mobile navigator.vibrate + iOS Sub-Bass + Gamepad Dual-Rumble)
        ======================================================================= */
     let hapticToastTimer = null;
+
+    // Sub-Bass Acoustic Haptic Impulse: drives phone physical bottom speaker with 45Hz sine wave
+    // Generates genuine physical vibration in the user's hand on iOS Safari (where Apple lacks navigator.vibrate)
+    function playHapticAudioImpulse(durationMs = 140, freq = 45) {
+      try {
+        ensureAudioCtx();
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        const now = audioCtx.currentTime;
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(26, now + durationMs / 1000);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.38, now + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + durationMs / 1000);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + durationMs / 1000);
+      } catch (e) {}
+    }
+
+    function showGamepadBanner(msg) {
+      const banner = document.getElementById('gamepad-banner');
+      if (!banner) return;
+      banner.innerText = msg;
+      banner.classList.add('show');
+      clearTimeout(window.__gpBannerTimer);
+      window.__gpBannerTimer = setTimeout(() => banner.classList.remove('show'), 3800);
+    }
+
+    window.addEventListener('gamepadconnected', (e) => {
+      const pad = e.gamepad;
+      showGamepadBanner(`🎮 已連線手把: ${pad.id} ｜ 支援左搖桿走動、右搖桿旋轉、A鍵摸狗、X鍵震動`);
+      window.triggerHaptics([90, 50, 160], 0.75, 0.95, 320, `🎮 手把已連線: ${pad.id.substring(0, 24)}`);
+    });
+
+    window.addEventListener('gamepaddisconnected', (e) => {
+      showGamepadBanner(`⚠️ 手把已離線: ${e.gamepad.id.substring(0, 24)}`);
+    });
+
     window.triggerHaptics = function(pattern = [120, 60, 180], gpWeak = 0.65, gpStrong = 0.85, gpDuration = 320, label = '') {
       // 1. Mobile Web Vibration API (Android / supported mobile browsers)
+      let mobileVibrated = false;
       try {
-        if (navigator.vibrate) {
-          navigator.vibrate(pattern);
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          mobileVibrated = navigator.vibrate(pattern);
         }
       } catch (e) {}
 
-      // 2. Gamepad Haptic Actuator API (Xbox / PlayStation / Switch Pro controllers)
+      // 2. iOS Safari & Android Sub-Bass Speaker Physical Haptic Thump
+      playHapticAudioImpulse(gpDuration * 0.75, 44);
+
+      // 3. Gamepad Haptic Actuator API (Bluetooth & USB Wired Gamepads: Xbox / DualSense / Switch Pro)
       try {
-        if (navigator.getGamepads) {
+        if (typeof navigator !== 'undefined' && navigator.getGamepads) {
           const pads = navigator.getGamepads();
           for (let i = 0; i < pads.length; i++) {
             const pad = pads[i];
@@ -2984,7 +3068,7 @@
         }
       } catch (e) {}
 
-      // 3. Visual Screen-Shake & Haptic Toast Feedback
+      // 4. Visual Screen-Shake & Haptic Toast Feedback
       document.body.classList.remove('haptic-shake');
       void document.body.offsetWidth;
       document.body.classList.add('haptic-shake');
@@ -2998,6 +3082,69 @@
           hapticToastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
         }
       }
+    };
+
+    window.testHapticsAndGamepad = function() {
+      ensureAudioCtx();
+      const hasVibrate = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+      let vibrateFired = false;
+      try {
+        if (hasVibrate) {
+          vibrateFired = navigator.vibrate([160, 70, 220, 80, 300]);
+        }
+      } catch (e) {}
+      playHapticAudioImpulse(280, 42);
+
+      let gamepadCount = 0;
+      let padNames = [];
+      try {
+        if (navigator.getGamepads) {
+          const pads = navigator.getGamepads();
+          for (let i = 0; i < pads.length; i++) {
+            const p = pads[i];
+            if (!p) continue;
+            gamepadCount++;
+            padNames.push(p.id.replace(/\s*\(.*?\)/g, '').substring(0, 18));
+            if (p.vibrationActuator && p.vibrationActuator.playEffect) {
+              p.vibrationActuator.playEffect('dual-rumble', {
+                startDelay: 0,
+                duration: 650,
+                weakMagnitude: 0.85,
+                strongMagnitude: 1.0
+              }).catch(() => {});
+            } else if (p.hapticActuators && p.hapticActuators[0] && p.hapticActuators[0].pulse) {
+              p.hapticActuators[0].pulse(1.0, 650);
+            }
+          }
+        }
+      } catch (e) {}
+
+      let statusMsg = '';
+      if (hasVibrate) {
+        statusMsg = '📳 Android 實體震動已觸發！(若無感請確認系統: 聲音與震動 > 觸控回饋)';
+      } else {
+        statusMsg = '🍎 iOS 聲學實體重低音震動已觸發 (Apple WebKit 限制 vibrate API)';
+      }
+      if (gamepadCount > 0) {
+        statusMsg += ` ｜ 🎮 手把雙馬達震動中: ${padNames.join(', ')}`;
+      } else {
+        statusMsg += ' ｜ 🎮 手把未偵測（支援藍牙/有線 Xbox/PS/Switch，請按手把任意鍵喚醒）';
+      }
+
+      window.triggerHaptics([140, 60, 240], 0.85, 1.0, 650, statusMsg);
+      showGamepadBanner(statusMsg);
+      return { hasVibrate, vibrateFired, gamepadCount };
+    };
+
+    window.toggleTopHUD = function() {
+      const isCollapsed = document.body.classList.toggle('top-hud-collapsed');
+      const btnIcon = document.getElementById('hud-toggle-icon');
+      const btnText = document.getElementById('hud-toggle-text');
+      if (btnIcon && btnText) {
+        btnIcon.innerText = isCollapsed ? '▼' : '▲';
+        btnText.innerText = isCollapsed ? '選單' : '收合';
+      }
+      return isCollapsed;
     };
 
     function playDogBarkSound() {
@@ -3041,6 +3188,13 @@
       const h = document.getElementById('normal-help');
       if (h) h.classList.toggle('mobile-open');
     };
+
+    window.addEventListener('pointerdown', (e) => {
+      const h = document.getElementById('normal-help');
+      if (h && h.classList.contains('mobile-open') && !h.contains(e.target) && !e.target.closest('.help-toggle-btn')) {
+        h.classList.remove('mobile-open');
+      }
+    });
 
     window.toggleVirtualJoystick = function() {
       document.body.classList.toggle('show-joystick');
@@ -3472,7 +3626,10 @@
         occludablesCount: occludableObjects.length,
         minOccludableAlpha: Math.min(...occludableObjects.map(o => o.currentAlpha)),
         monumentsCount: monuments.length,
-        isBuildMode: buildMode
+        isBuildMode: buildMode,
+        isTopHUDCollapsed: document.body.classList.contains('top-hud-collapsed'),
+        hasVibrateAPI: typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function',
+        connectedGamepads: (typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean).map(g => ({ id: g.id, hasVibration: !!(g.vibrationActuator && g.vibrationActuator.playEffect) })) : [])
       }),
       teleportPlayer: (x, z) => {
         isMoving = false;
@@ -3527,7 +3684,7 @@
         k.tail.rotation.y = Math.sin(t * 12.0 + k.angle) * 0.42;
       });
 
-      // Virtual Joystick & Gamepad Left-Stick Input Polling
+      // Virtual Joystick & Gamepad (Bluetooth & USB) Polling
       let stickX = joyVecX;
       let stickY = joyVecY;
       try {
@@ -3543,8 +3700,27 @@
             if (Math.abs(p.axes[2] || 0) > 0.2) {
               targetYaw -= p.axes[2] * 0.035;
             }
+            // Button 0 (A): Pet dog
             if (p.buttons[0] && p.buttons[0].pressed && companionDog.excitedTimer <= 0) {
               window.petGoldenDog();
+            }
+            // Button 1 (B): Pray / Sit
+            if (p.buttons[1] && p.buttons[1].pressed) {
+              window.triggerAction('pray');
+            }
+            // Button 2 (X): Test vibration & haptics
+            if (p.buttons[2] && p.buttons[2].pressed && !p.__xPressed) {
+              p.__xPressed = true;
+              window.testHapticsAndGamepad();
+            } else if (!p.buttons[2] || !p.buttons[2].pressed) {
+              p.__xPressed = false;
+            }
+            // Button 3 (Y): Toggle Top HUD Collapse (手遊沉浸模式)
+            if (p.buttons[3] && p.buttons[3].pressed && !p.__yPressed) {
+              p.__yPressed = true;
+              window.toggleTopHUD();
+            } else if (!p.buttons[3] || !p.buttons[3].pressed) {
+              p.__yPressed = false;
             }
           }
         }

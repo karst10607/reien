@@ -3,7 +3,7 @@
 Zero-Dependency Automated End-to-End (E2E) & Static Verification Test Suite
 for Reien 2.5D Cloud Memorial Garden & Town Builder (Chrome DevTools Protocol).
 
-Covers 10 Comprehensive Test Cases:
+Covers 12 Comprehensive Test Cases:
   TC-01: Static HTML & Inline JS Syntax Check (via node --check)
   TC-02: Zero Runtime & WebGL Scene Boot Verification
   TC-03: Mobile Portrait (390x844) Layout, Non-Obstruction & Virtual Joystick Check
@@ -14,6 +14,8 @@ Covers 10 Comprehensive Test Cases:
   TC-08: Multi-Layered Daytime Lighting Contrast, 4096 Shadow Map, God-Rays & Komorebi Shader
   TC-09: Tree Canopy & Indoor House See-Through Occlusion Transparency (X-Ray Fade)
   TC-10: Town Builder Mode & Memorial Shrine Modal Offerings
+  TC-11: Mobile Portrait Top UI Collapse / Immersive Mode (手遊風格沉浸式收合頂部選單)
+  TC-12: Bluetooth & Wired Gamepad Actuator Dual-Rumble Test
 """
 import argparse
 import base64
@@ -495,6 +497,77 @@ def run_browser_suite(screenshot_dir: str = None):
         assert_true(len(modal_res['errors']) == 0, f"Runtime errors detected: {modal_res['errors']}")
         print("PASS")
 
+        # -----------------------------------------------------------------
+        # TC-11: Mobile Portrait Top UI Collapse / Immersive Mode (手遊風格收合頂部選單)
+        # -----------------------------------------------------------------
+        print("[TC-11] Mobile Portrait Top UI Collapse / Immersive Mode...", end=" ", flush=True)
+        call_cdp(ws, "Emulation.setDeviceMetricsOverride", {
+            "width": 390, "height": 844, "deviceScaleFactor": 2, "mobile": True
+        })
+        time.sleep(0.4)
+        hud_res = eval_js(ws, """
+            const wasCollapsed = document.body.classList.contains('top-hud-collapsed');
+            window.toggleTopHUD();
+            const nowCollapsed = document.body.classList.contains('top-hud-collapsed');
+            const controlsDisplay = window.getComputedStyle(document.querySelector('.top-controls')).display;
+            const topBarHeight = document.querySelector('.top-bar').getBoundingClientRect().height;
+            return { wasCollapsed, nowCollapsed, controlsDisplay, topBarHeight };
+        """)
+        assert_true(hud_res['nowCollapsed'], "toggleTopHUD() did not add top-hud-collapsed class")
+        assert_true(hud_res['controlsDisplay'] == 'none', f"Top controls should be hidden when collapsed, got {hud_res['controlsDisplay']}")
+        assert_true(hud_res['topBarHeight'] < 55, f"Top bar height should be < 55px when collapsed, got {hud_res['topBarHeight']}")
+
+        if screenshot_dir:
+            time.sleep(0.5)
+            shot_path = os.path.join(screenshot_dir, "mobile_portrait_collapsed_immersive.png")
+            capture_png(ws, shot_path)
+            reien_shot = os.path.join(ROOT_DIR, "docs", "screenshots", "mobile_portrait_collapsed_immersive.png")
+            capture_png(ws, reien_shot)
+            print("(Captured mobile_portrait_collapsed_immersive.png)", end=" ", flush=True)
+
+        # Restore top HUD
+        eval_js(ws, "window.toggleTopHUD();")
+        call_cdp(ws, "Emulation.clearDeviceMetricsOverride")
+        call_cdp(ws, "Emulation.setDeviceMetricsOverride", {
+            "width": 1366, "height": 840, "deviceScaleFactor": 1, "mobile": False
+        })
+        time.sleep(0.3)
+        print("PASS")
+
+        # -----------------------------------------------------------------
+        # TC-12: Bluetooth & Wired Gamepad Actuator Dual-Rumble Test
+        # -----------------------------------------------------------------
+        print("[TC-12] Bluetooth & Wired Gamepad Actuator Dual-Rumble...", end=" ", flush=True)
+        gp_res = eval_js(ws, """
+            window.__gpRumbles = [];
+            navigator.getGamepads = () => [{
+                id: 'Xbox Wireless Controller (Bluetooth)',
+                index: 0,
+                connected: true,
+                axes: [0, 0, 0, 0],
+                buttons: [{ pressed: false }, { pressed: false }, { pressed: false }, { pressed: false }],
+                vibrationActuator: {
+                    playEffect: (type, params) => {
+                        window.__gpRumbles.push({ type, params });
+                        return Promise.resolve('complete');
+                    }
+                }
+            }];
+            const diagResult = window.testHapticsAndGamepad();
+            const bannerVisible = document.getElementById('gamepad-banner').classList.contains('show');
+            return {
+                gamepadCount: diagResult.gamepadCount,
+                rumbles: window.__gpRumbles,
+                bannerVisible
+            };
+        """)
+        assert_true(gp_res['gamepadCount'] >= 1, "testHapticsAndGamepad failed to count connected gamepad")
+        assert_true(len(gp_res['rumbles']) >= 1, "Gamepad playEffect('dual-rumble') was not invoked")
+        assert_true(gp_res['rumbles'][0]['type'] == 'dual-rumble', "Rumble effect type must be dual-rumble")
+        assert_true(gp_res['rumbles'][0]['params']['strongMagnitude'] >= 0.9, "Strong rumble magnitude should be >= 0.9")
+        assert_true(gp_res['bannerVisible'], "Gamepad diagnostic banner was not shown")
+        print("PASS")
+
         ws.close()
     finally:
         proc.terminate()
@@ -509,13 +582,13 @@ def main():
 
     start_t = time.time()
     print("=" * 70)
-    print("🚀 Starting Reien 2.5D Cloud Memorial Garden CI/CD Test Suite (10 Cases)")
+    print("🚀 Starting Reien 2.5D Cloud Memorial Garden CI/CD Test Suite (12 Cases)")
     print("=" * 70)
     run_tc01_static_syntax()
     run_browser_suite(screenshot_dir=args.screenshots)
     elapsed = time.time() - start_t
     print("=" * 70)
-    print(f"✅ ALL 10 CI/CD TEST CASES PASSED IN {elapsed:.2f}s!")
+    print(f"✅ ALL 12 CI/CD TEST CASES PASSED IN {elapsed:.2f}s!")
     print("=" * 70)
 
 
