@@ -1,5 +1,8 @@
 # 🌸 星塵彼岸 ‧ 2.5D 溫馨線上靈園技術評估與開源方案對比報告
 
+> 🌐 **線上即時體驗網址 (Live Demo)**：👉 **[https://karst10607.github.io/reien/](https://karst10607.github.io/reien/)**  
+> *(手機、平板、電腦打開瀏覽器 3 秒內直接進入，免下載任何 App 即可漫步、獻花、點燈與自建花園)*
+
 本報告結合了使用者提供的討論記錄（包含日本/台灣線上靈園案例、RO 偽 3D 開源方案、PocketBase CMS 架構）與本地即時運行的 Prototype 實測成果，進行全方位的技術棧與維護體系比較。
 
 ---
@@ -9,7 +12,7 @@
 以下為目前在本地伺服器運行的 2.5D RO 風格線上靈園即時算繪畫面：
 
 ### 1. 靈園主世界全景 (World Overview & UI)
-![線上靈園主世界全景](file:///C:/Users/Sunya/.gemini/antigravity/brain/53f21979-cd7d-469e-9a9a-47a318cf701c/memorial_ui_full.png)
+![線上靈園主世界全景](./screenshots/memorial_ui_full.png)
 > **畫面特點**：
 > - **RO 經典 45° 斜俯視角 (Isometric)**：低多邊形（Low-poly）造景，包含中央守護聖壇（鳥居/香爐）、靜心蓮池、千本祈願櫻花巨樹、石燈籠步道。
 > - **動態氛圍粒子**：空中隨風飄拂的粉白櫻花落瓣粒子系統與夜間螢火蟲。
@@ -18,7 +21,7 @@
 ---
 
 ### 2. 中央守護聖壇互動面板 (Memorial Interaction Modal)
-![中央守護聖壇互動面板](file:///C:/Users/Sunya/.gemini/antigravity/brain/53f21979-cd7d-469e-9a9a-47a318cf701c/memorial_modal_full.png)
+![中央守護聖壇互動面板](./screenshots/memorial_modal_full.png)
 > **互動亮點**：
 > - **追思奉獻**：點擊可供奉鮮花（聖壇前即時生成 3D 盛開花朵）、點燃長明燈（增加跳動暖火光源）、心香祈福。
 > - **雲端親友思念信箱**：親友可自訂暱稱並留下悼念字句，資料即時釘在回憶牆上。

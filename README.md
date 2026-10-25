@@ -3,6 +3,13 @@
 > 一個重現《仙境傳說 RO》與《動物森友會》溫暖治癒風格的 2.5D 偽 3D 線上靈園、虛擬追思園與自建庭園小鎮。  
 > 具備免安裝瀏覽器秒開、點擊走動、聖壇獻花點燈、親友追思信箱、以及完整的**自由建造庭園小鎮系統**。
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-%E7%8F%BE%E5%9C%A8%E5%85%8D%E5%AE%89%E8%A3%9D%E5%85%A5%E5%9C%92%E5%8F%83%E8%A8%AA-10b981?style=for-the-badge&logo=googlechrome&logoColor=white)](https://karst10607.github.io/reien/)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Online-blue?style=for-the-badge)](https://karst10607.github.io/reien/)
+
+### 🌐 線上即時參訪網址 (Live Visit Link)
+👉 **[https://karst10607.github.io/reien/](https://karst10607.github.io/reien/)**  
+*(手機、平板、電腦打開瀏覽器 3 秒內直接進入，免下載任何 App 即可漫步、獻花、點燈與自建花園)*
+
 ---
 
 ## 📸 實機畫面 (Live Screenshots)
