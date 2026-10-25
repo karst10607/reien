@@ -40,6 +40,11 @@
       padding: 8px 10px; border-radius: 14px; display: inline-block; box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
     }
     .brand-title { font-size: 16px; font-weight: 700; color: #f8fafc; letter-spacing: 0.5px; }
+    .version-badge {
+      font-size: 10px; background: rgba(56, 189, 248, 0.22); color: #7dd3fc;
+      border: 1px solid rgba(56, 189, 248, 0.45); padding: 1px 6px; border-radius: 999px;
+      font-weight: 700; margin-left: 6px; vertical-align: middle; display: inline-block;
+    }
     .brand-subtitle { font-size: 11.5px; color: #94a3b8; margin-top: 2px; display: flex; align-items: center; gap: 6px; }
     .online-indicator {
       width: 8px; height: 8px; background: #34d399; border-radius: 50%; display: inline-block;
@@ -342,10 +347,10 @@
       <div class="brand-card">
         <span class="brand-icon">🕊️</span>
         <div>
-          <div class="brand-title">星塵彼岸 ‧ 雲端小鎮與紀念庭園</div>
+          <div class="brand-title">星塵彼岸 ‧ 雲端小鎮與紀念庭園 <span class="version-badge">v1.3.0</span></div>
           <div class="brand-subtitle">
             <span class="online-indicator"></span>
-            <span id="sync-status">Next-Gen PBR 凹凸法線貼圖 ‧ GLSL 景深折射水體 ‧ 滾輪縮放視角</span>
+            <span id="sync-status">v1.3.0 ‧ Next-Gen PBR 凹凸法線貼圖 ‧ GLSL 景深折射水體 ‧ 滾輪縮放視角</span>
           </div>
         </div>
         <button id="btn-top-hud-toggle" class="hud-toggle-btn" onclick="toggleTopHUD()" title="手遊沉浸模式 (收合/展開頂部面板)">
