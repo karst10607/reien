@@ -377,10 +377,10 @@
       <div class="brand-card">
         <span class="brand-icon">🕊️</span>
         <div>
-          <div class="brand-title">福岡山河城鎮 ‧ 室見川海岸 ＆ 早良稻田 ＆ 油山展望台 <span class="version-badge">v1.4.0</span></div>
+          <div class="brand-title"><span id="world-brand-title">雙城山河紀行 ‧ 福岡室見川 ＆ 新北土城大漢溪</span> <span class="version-badge">v1.5.0</span></div>
           <div class="brand-subtitle">
             <span class="online-indicator"></span>
-            <span id="sync-status">v1.4.0 ‧ 福岡西區＆早良區 ‧ 愛宕神社 ‧ 早良里山稻田水車 ‧ 油山俯瞰福岡機場</span>
+            <span id="sync-status">v1.5.0 ‧ 福岡室見川地下鐵＆市街 ‧ 土城大漢溪防汛堤＆天上山桐花</span>
           </div>
         </div>
         <button id="btn-top-hud-toggle" class="hud-toggle-btn" onclick="toggleTopHUD()" title="手遊沉浸模式 (收合/展開頂部面板)">
@@ -406,12 +406,17 @@
         </div>
 
         <div class="control-row">
-          <div class="pill-group" id="fukuoka-scenic-group" style="border: 1px solid rgba(56, 189, 248, 0.35);">
-            <span style="font-size:11px; color:#7dd3fc; font-weight:700; padding:0 5px; display:flex; align-items:center;">📍 福岡名勝巡禮:</span>
-            <button class="pill-btn" onclick="teleportToScenic('coast')" title="前往博多灣海岸與室見川出海口">🌊 室見川海濱</button>
+          <div class="pill-group" id="map-switcher-group" style="border: 1px solid rgba(244, 114, 182, 0.45); background: rgba(15, 23, 42, 0.9);">
+            <button id="btn-map-fukuoka" class="pill-btn active" onclick="switchWorldMap('fukuoka')" title="探索日本福岡：室見川長河、早良梯田、油山與地下電車">🌸 福岡・室見川海濱</button>
+            <button id="btn-map-tucheng" class="pill-btn" onclick="switchWorldMap('tucheng')" title="探索台灣新北土城：大漢溪河濱、防汛大堤、城鎮騎樓與天上山油桐花">桐 新北・土城大漢溪</button>
+          </div>
+          <div class="pill-group" id="scenic-waypoints-group" style="border: 1px solid rgba(56, 189, 248, 0.35);">
+            <span id="scenic-nav-title" style="font-size:11px; color:#7dd3fc; font-weight:700; padding:0 5px; display:flex; align-items:center;">📍 福岡名勝:</span>
+            <button class="pill-btn" onclick="teleportToScenic('coast')" title="前往博多灣海岸與室見川出海口">🌊 室見海濱</button>
             <button class="pill-btn" onclick="teleportToScenic('atago')" title="前往愛宕山頂・愛宕神社鳥居">⛩️ 愛宕神社</button>
             <button class="pill-btn" onclick="teleportToScenic('satoyama')" title="前往早良區深處梯田・水車小屋">🌾 早良稻田</button>
-            <button class="pill-btn" onclick="teleportToScenic('aburayama')" title="登上油山山頂展望台・俯瞰福岡市區與機場起降">⛰️ 油山展望台</button>
+            <button class="pill-btn" onclick="teleportToScenic('muromi_subway')" title="前往地下鐵空港線室見站與地下電車隧道">🚇 室見地下鐵</button>
+            <button class="pill-btn" onclick="teleportToScenic('aburayama')" title="登上油山山頂展望台・俯瞰福岡市區與機場">⛰️ 油山展望</button>
           </div>
         </div>
 
@@ -1074,7 +1079,6 @@
         uniform float uIntensity;
         varying vec2 vUv;
         void main() {
-          // Soft horizontal gaussian beam + vertical atmospheric scattering fade + chromatic core gradient
           float radial = sin(vUv.x * 3.14159265);
           radial = pow(max(0.0, radial), 1.65);
           float verticalFade = smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.12, vUv.y);
@@ -1105,39 +1109,56 @@
     const windowMeshes = [];
 
     /* =======================================================================
-       4. Fukuoka Geographic Topography (Muromi River, Atago Hill, Sawara Rice Terraces, Mt. Aburayama)
+       4. Dual-World Architectural Groups (Fukuoka & Tucheng)
        ======================================================================= */
-    function getRiverCenterX(z) {
-      // S-curve river: from Mt. Aburayama valleys (Z ~ 48, X ~ 5) north through Sawara (Z ~ 0, X ~ 3), past Atago hill (Z ~ -24, X ~ -4) to Hakata Bay (Z ~ -42, X ~ -6)
-      return 3.0 + Math.sin(z * 0.08) * 4.5 + Math.cos(z * 0.04) * 2.2 - (z < -18 ? (z + 18) * 0.18 : 0);
+    const fukuokaWorldGroup = new THREE.Group();
+    scene.add(fukuokaWorldGroup);
+    window.fukuokaWorldGroup = fukuokaWorldGroup;
+
+    const tuchengWorldGroup = new THREE.Group();
+    tuchengWorldGroup.visible = false; // Starts in Fukuoka
+    scene.add(tuchengWorldGroup);
+    window.tuchengWorldGroup = tuchengWorldGroup;
+
+    window.currentMapId = 'fukuoka';
+
+    /* =======================================================================
+       4.1 Fukuoka Geographic Topography (Muromi River, Atago Hill, Sawara, Mt. Aburayama)
+       ======================================================================= */
+    // Proportional, longer and more winding Muromi River (Z: -80 to +80)
+    function getFukuokaRiverCenterX(z) {
+      // Natural serpentine S-curve flowing north into Hakata Bay:
+      // Z ~ 75 (valleys of Aburayama) -> Z ~ 35 (Sawara paddies) -> Z ~ 0 (Muromi bridge) -> Z ~ -30 (Atago hill) -> Z ~ -75 (Hakata Bay)
+      return 3.5 + Math.sin(z * 0.055) * 9.0 + Math.cos(z * 0.11) * 3.8 + Math.sin(z * 0.02) * 4.0 - (z < -30 ? (z + 30) * 0.18 : 0);
     }
 
-    function getRiverHalfWidth(z) {
-      if (z < -36) {
+    function getFukuokaRiverHalfWidth(z) {
+      if (z < -42) {
         // Estuary mouth widens into Hakata Bay
-        return 4.2 + Math.min(16.0, (-36 - z) * 1.35);
+        return 5.5 + Math.min(18.0, (-42 - z) * 0.85);
       }
-      const bayFactor = Math.exp(-Math.pow((z - 0.0) / 7.2, 2));
-      return 2.8 + bayFactor * 1.6;
+      const urbanZone = Math.exp(-Math.pow(z / 20.0, 2));
+      return 3.8 + urbanZone * 1.8 + Math.sin(z * 0.04) * 0.8;
     }
 
-    function isPointInRiver(x, z, extraMargin = 0) {
-      if (z < -42 || z > 52) return false;
-      const cx = getRiverCenterX(z);
-      const hw = getRiverHalfWidth(z) + extraMargin;
+    function isPointInFukuokaRiver(x, z, extraMargin = 0) {
+      if (z < -78 || z > 78) return false;
+      const cx = getFukuokaRiverCenterX(z);
+      const hw = getFukuokaRiverHalfWidth(z) + extraMargin;
       return Math.abs(x - cx) < hw;
     }
 
-    const bridgeCenterX = getRiverCenterX(0);
+    const fukuokaBridgeCenterX = getFukuokaRiverCenterX(0);
+    const bridgeCenterX = fukuokaBridgeCenterX; // backward compatibility
 
-    function getTerrainHeight(x, z) {
-      // 1. Hakata Bay open waters (Z < -42)
-      if (z < -42) return 0.0;
+    function getFukuokaHeight(x, z) {
+      // 1. Hakata Bay open waters (Z < -44)
+      if (z < -44) return 0.0;
 
-      // Coastal slope (Z between -42 and -36)
+      // Coastal slope (Z between -44 and -38)
       let h = 0.0;
-      if (z < -36) {
-        h = Math.max(0.0, (z + 42) * 0.18);
+      if (z < -38) {
+        h = Math.max(0.0, (z + 44) * 0.14);
       } else {
         h = 0.85; // Base plain elevation
       }
@@ -1147,7 +1168,6 @@
       if (atagoDist < 18.0) {
         const normDist = atagoDist / 18.0;
         const hill = Math.cos(normDist * Math.PI * 0.5);
-        // Smooth hill dome up to +9.6m, with flattened summit for Atago Shrine
         h += Math.pow(hill, 1.6) * 9.6;
       }
 
@@ -1156,12 +1176,11 @@
       if (aburaDist < 36.0) {
         const normDist = aburaDist / 36.0;
         const mtn = Math.cos(normDist * Math.PI * 0.5);
-        // Dramatic mountain summit up to +24.5m with overlook deck
         h += Math.pow(mtn, 1.45) * 24.5;
       }
 
-      // 4. Deep Sawara Rice Terraces (早良區深處梯田 - Southwest, X in [-34, -6], Z in [12, 54])
-      if (x > -35 && x < -6 && z > 12 && z < 54) {
+      // 4. Deep Sawara Rice Terraces (早良區深處梯田 - Southwest, X in [-35, -6], Z in [14, 54])
+      if (x > -35 && x < -6 && z > 14 && z < 54) {
         let terrace = 0.0;
         if (z < 25) terrace = 1.35;
         else if (z < 38) terrace = 2.95;
@@ -1170,9 +1189,9 @@
       }
 
       // 5. Muromi Riverbed Channel Depression
-      if (z >= -42 && z <= 52) {
-        const cx = getRiverCenterX(z);
-        const hw = getRiverHalfWidth(z);
+      if (z >= -78 && z <= 78) {
+        const cx = getFukuokaRiverCenterX(z);
+        const hw = getFukuokaRiverHalfWidth(z);
         const dCenter = Math.abs(x - cx);
         if (dCenter < hw) {
           const depression = (1.0 - Math.pow(dCenter / hw, 2)) * 1.15;
@@ -1180,54 +1199,162 @@
         }
       }
 
-      // 6. Muromi Arched Bridge Elevation
-      if (Math.abs(z - 0.0) < 2.0 && Math.abs(x - bridgeCenterX) < 4.2) {
-        const bt = (x - bridgeCenterX) / 8.4;
-        h = Math.max(h, 0.85 + Math.cos(bt * Math.PI) * 1.05);
+      // 6. Muromi Arched Bridge Elevation (Z ~ 0)
+      if (Math.abs(z - 0.0) < 2.0 && Math.abs(x - fukuokaBridgeCenterX) < 5.4) {
+        const bt = (x - fukuokaBridgeCenterX) / 10.8;
+        h = Math.max(h, 0.85 + Math.cos(bt * Math.PI) * 1.15);
       }
 
       return Math.max(0.0, h);
     }
+
+    /* =======================================================================
+       4.2 Tucheng Geographic Topography (Dahan River, Floodplain, Dike, Town, Mt. Tianshang)
+       ======================================================================= */
+    function getTuchengRiverCenterX(z) {
+      // Dahan River flows along northern perimeter (Z < -26)
+      return -12.0 + Math.sin(z * 0.04) * 8.5;
+    }
+
+    function getTuchengRiverHalfWidth(z) {
+      return 18.0 + Math.cos(z * 0.03) * 3.5;
+    }
+
+    function isPointInTuchengRiver(x, z, extraMargin = 0) {
+      if (z > -26) return false;
+      const cx = getTuchengRiverCenterX(z);
+      const hw = getTuchengRiverHalfWidth(z) + extraMargin;
+      return Math.abs(x - cx) < hw;
+    }
+
+    function getTuchengHeight(x, z) {
+      // 1. Dahan River Channel (Z < -28)
+      if (z < -28) {
+        const cx = getTuchengRiverCenterX(z);
+        const hw = getTuchengRiverHalfWidth(z);
+        const d = Math.abs(x - cx);
+        if (d < hw) {
+          return 0.15 - (1.0 - Math.pow(d / hw, 2)) * 0.55;
+        }
+        return 0.35;
+      }
+
+      // 2. High Floodplain Riverside Park (高灘地河濱公園, Z in [-28, -2])
+      let h = 0.85;
+
+      // 3. Concrete Flood Control Dike (擺接堡路防汛大堤防, Z in [-2, 8])
+      if (z >= -2 && z <= 8) {
+        if (z < 3) {
+          // River-side concrete slope rising from 0.85 to 3.65m
+          const t = (z - (-2)) / 5.0;
+          h = 0.85 + t * 2.80;
+        } else if (z <= 5) {
+          // Dike top boulevard (擺接堡路)
+          h = 3.65;
+        } else {
+          // City-side slope descending from 3.65 to 2.40m
+          const t = (z - 5) / 3.0;
+          h = 3.65 - t * 1.25;
+        }
+      } else if (z > 8) {
+        // Tucheng Urban Plain Base Elevation
+        h = 2.40;
+      }
+
+      // 4. Southeast Tianshangshan Mountain Range (天上山系: 天上山、大尖山、文筆山)
+      // Tianshangshan Main Summit (天上山, X ~ 46, Z ~ 42)
+      const tianDist = Math.hypot(x - 46, z - 42);
+      if (tianDist < 36.0) {
+        const norm = tianDist / 36.0;
+        const peak = Math.cos(norm * Math.PI * 0.5);
+        h += Math.pow(peak, 1.4) * 26.5;
+      }
+      // Dajian Shan (大尖山, X ~ 32, Z ~ 62)
+      const dajianDist = Math.hypot(x - 32, z - 62);
+      if (dajianDist < 24.0) {
+        const norm = dajianDist / 24.0;
+        const peak = Math.cos(norm * Math.PI * 0.5);
+        h += Math.pow(peak, 1.5) * 18.2;
+      }
+      // Wenbi Shan (文筆山, X ~ 58, Z ~ 22)
+      const wenbiDist = Math.hypot(x - 58, z - 22);
+      if (wenbiDist < 26.0) {
+        const norm = wenbiDist / 26.0;
+        const peak = Math.cos(norm * Math.PI * 0.5);
+        h += Math.pow(peak, 1.5) * 19.5;
+      }
+
+      return Math.max(0.0, h);
+    }
+
+    /* =======================================================================
+       4.3 Global Elevation & River Dispatchers
+       ======================================================================= */
+    function getTerrainHeight(x, z) {
+      if (window.currentMapId === 'tucheng') {
+        return getTuchengHeight(x, z);
+      }
+      return getFukuokaHeight(x, z);
+    }
+
+    function isPointInRiver(x, z, extraMargin = 0) {
+      if (window.currentMapId === 'tucheng') {
+        return isPointInTuchengRiver(x, z, extraMargin);
+      }
+      return isPointInFukuokaRiver(x, z, extraMargin);
+    }
+
+    function getRiverCenterX(z) {
+      if (window.currentMapId === 'tucheng') return getTuchengRiverCenterX(z);
+      return getFukuokaRiverCenterX(z);
+    }
+
+    function getRiverHalfWidth(z) {
+      if (window.currentMapId === 'tucheng') return getTuchengRiverHalfWidth(z);
+      return getFukuokaRiverHalfWidth(z);
+    }
+
     window.getTerrainHeight = getTerrainHeight;
+    window.isPointInRiver = isPointInRiver;
     window.getRiverCenterX = getRiverCenterX;
     window.getRiverHalfWidth = getRiverHalfWidth;
-    window.isPointInRiver = isPointInRiver;
+    window.getFukuokaHeight = getFukuokaHeight;
+    window.getTuchengHeight = getTuchengHeight;
 
-    // 4.1 3D Fukuoka Expanded Topography Mesh (180x200m)
-    const groundGeo = new THREE.PlaneGeometry(180, 200, 140, 150);
-    const gPos = groundGeo.attributes.position;
-    const gColors = new Float32Array(gPos.count * 3);
-    for (let i = 0; i < gPos.count; i++) {
-      const vx = gPos.getX(i);
-      const vy = gPos.getY(i); // maps to world -Z after -PI/2 rotation
+    // 4.4 3D Fukuoka Expanded Topography Mesh (180x200m)
+    const fukuokaGroundGeo = new THREE.PlaneGeometry(180, 200, 140, 150);
+    const fgPos = fukuokaGroundGeo.attributes.position;
+    const fgColors = new Float32Array(fgPos.count * 3);
+    for (let i = 0; i < fgPos.count; i++) {
+      const vx = fgPos.getX(i);
+      const vy = fgPos.getY(i);
       const wz = -vy;
 
-      const th = getTerrainHeight(vx, wz);
-      gPos.setZ(i, th);
+      const th = getFukuokaHeight(vx, wz);
+      fgPos.setZ(i, th);
 
-      // Multi-zone chromatic vertex colors
-      let r = 0.65, g = 0.82, b = 0.52; // Default lush plain green
+      let r = 0.65, g = 0.82, b = 0.52; // Plain green
       if (wz < -38) {
         // Hakata Bay Sand Shore
         r = 0.88; g = 0.80; b = 0.62;
-      } else if (vx > -35 && vx < -6 && wz > 12 && wz < 54) {
-        // Sawara Rice Paddies: Vibrant golden-green agricultural hue
+      } else if (vx > -35 && vx < -6 && wz > 14 && wz < 54) {
+        // Sawara Rice Paddies: Golden-green agriculture
         r = 0.62 + Math.sin(vx * 0.4) * 0.08;
         g = 0.85;
         b = 0.32;
       } else if (Math.hypot(vx - (-26), wz - (-26)) < 16.0) {
-        // Atago Hill: Deep cedar & shrine rock
+        // Atago Hill
         r = 0.32; g = 0.58; b = 0.35;
       } else if (Math.hypot(vx - 38, wz - 32) < 32.0) {
-        // Mt. Aburayama: Highland ridge rock & alpine forest
+        // Mt. Aburayama
         r = 0.30; g = 0.50; b = 0.32;
       }
-      gColors[i * 3] = r;
-      gColors[i * 3 + 1] = g;
-      gColors[i * 3 + 2] = b;
+      fgColors[i * 3] = r;
+      fgColors[i * 3 + 1] = g;
+      fgColors[i * 3 + 2] = b;
     }
-    groundGeo.setAttribute('color', new THREE.BufferAttribute(gColors, 3));
-    groundGeo.computeVertexNormals();
+    fukuokaGroundGeo.setAttribute('color', new THREE.BufferAttribute(fgColors, 3));
+    fukuokaGroundGeo.computeVertexNormals();
 
     const groundMat = new THREE.MeshStandardMaterial({
       map: grassTerrainPBR.map,
@@ -1237,12 +1364,60 @@
       roughness: 0.76,
       metalness: 0.05
     });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    scene.add(ground);
+    const fukuokaGround = new THREE.Mesh(fukuokaGroundGeo, groundMat);
+    fukuokaGround.rotation.x = -Math.PI / 2;
+    fukuokaGround.receiveShadow = true;
+    fukuokaWorldGroup.add(fukuokaGround);
 
-    // 4.1b Dynamic Komorebi (木漏れ日) Dappled Sunlight & Drifting Cloud Shadows Layer
+    // 4.5 3D Tucheng Expanded Topography Mesh (180x200m)
+    const tuchengGroundGeo = new THREE.PlaneGeometry(180, 200, 140, 150);
+    const tgPos = tuchengGroundGeo.attributes.position;
+    const tgColors = new Float32Array(tgPos.count * 3);
+    for (let i = 0; i < tgPos.count; i++) {
+      const vx = tgPos.getX(i);
+      const vy = tgPos.getY(i);
+      const wz = -vy;
+
+      const th = getTuchengHeight(vx, wz);
+      tgPos.setZ(i, th);
+
+      let r = 0.55, g = 0.75, b = 0.48; // Base subtropical Taiwan green
+      if (wz < -28) {
+        // Dahan River wet sand & gravel
+        r = 0.42; g = 0.48; b = 0.45;
+      } else if (wz >= -28 && wz < -2) {
+        // Floodplain Park lush sports lawn
+        r = 0.52; g = 0.82; b = 0.38;
+      } else if (wz >= -2 && wz <= 8) {
+        // Concrete Dike & Baijiepu Road
+        r = 0.68; g = 0.68; b = 0.68;
+      } else if (wz > 8 && vx < 16) {
+        // Tucheng Urban Plain
+        r = 0.60; g = 0.62; b = 0.58;
+      } else if (vx >= 16 && wz >= 12) {
+        // Tianshangshan Mountain Range with blooming white Tung blossom snow ("五月雪")
+        const mountainNoise = Math.sin(vx * 0.4) * Math.cos(wz * 0.4);
+        if (mountainNoise > 0.35) {
+          // White Tung Blossom canopy
+          r = 0.94; g = 0.96; b = 0.98;
+        } else {
+          // Lush subtropical mountain forest
+          r = 0.22; g = 0.48; b = 0.25;
+        }
+      }
+      tgColors[i * 3] = r;
+      tgColors[i * 3 + 1] = g;
+      tgColors[i * 3 + 2] = b;
+    }
+    tuchengGroundGeo.setAttribute('color', new THREE.BufferAttribute(tgColors, 3));
+    tuchengGroundGeo.computeVertexNormals();
+
+    const tuchengGround = new THREE.Mesh(tuchengGroundGeo, groundMat);
+    tuchengGround.rotation.x = -Math.PI / 2;
+    tuchengGround.receiveShadow = true;
+    tuchengWorldGroup.add(tuchengGround);
+
+    // 4.6 Dynamic Komorebi (木漏れ日) Dappled Sunlight
     const komorebiUniforms = {
       uTime: { value: 0.0 },
       uSunStrength: { value: 1.0 },
@@ -1274,12 +1449,10 @@
           float edgeFade = 1.0 - smoothstep(24.0, 38.0, dist);
           if (edgeFade <= 0.01 || uSunStrength <= 0.02) discard;
 
-          // Slowly drifting atmospheric cloud shadows (large scale)
           vec2 cloudUv = p * 0.085 + vec2(uTime * 0.018, uTime * 0.011);
           float cloudNoise = sin(cloudUv.x * 3.2 + cos(cloudUv.y * 2.7)) * 0.5
                            + cos(cloudUv.y * 4.1 - sin(cloudUv.x * 3.5)) * 0.5;
 
-          // Komorebi leaf-filtered dappled golden light spots (medium/fine scale)
           vec2 dappleUv = p * 0.58 + vec2(sin(uTime * 0.45) * 0.18, cos(uTime * 0.38) * 0.18);
           float dapple = sin(dappleUv.x * 3.8 + cos(dappleUv.y * 4.2))
                        * cos(dappleUv.y * 3.6 - sin(dappleUv.x * 3.9));
@@ -1298,7 +1471,7 @@
     komorebiMesh.position.y = 0.098;
     scene.add(komorebiMesh);
 
-    // 4.2 High-Detail 3D Cobblestone Roads & Plaza (Normal + Roughness Mapped)
+    // 4.7 Cobblestone Roads & Plaza Material Generator
     function makeCobbleMat(rx, ry) {
       const map = new THREE.CanvasTexture(cobblePBR.colCanvas);
       const nMap = new THREE.CanvasTexture(cobblePBR.normCanvas);
@@ -1317,13 +1490,11 @@
       });
     }
 
-    // Subdivided uneven cobblestone road (subtle dips where puddles collect)
     function createUnevenCobbleRoad(w, l, rx, ry, rotY = 0) {
       const geo = new THREE.PlaneGeometry(w, l, 24, 64);
       const pos = geo.attributes.position;
       for (let i = 0; i < pos.count; i++) {
         const x = pos.getX(i), y = pos.getY(i);
-        // Subtle cobblestone crown in center & micro-undulations
         const crown = (1.0 - Math.pow(x / (w * 0.5), 2)) * 0.045;
         const undulate = Math.sin(x * 1.9 + y * 0.8) * 0.018;
         pos.setZ(i, crown + undulate);
@@ -1334,20 +1505,19 @@
       mesh.rotation.z = rotY;
       mesh.position.y = 0.025;
       mesh.receiveShadow = true;
-      scene.add(mesh);
+      fukuokaWorldGroup.add(mesh);
       return mesh;
     }
     const roadNS = createUnevenCobbleRoad(4.6, 52, 2, 22, 0);
     const roadEW = createUnevenCobbleRoad(4.6, 52, 2, 22, Math.PI / 2);
 
-    // Central Octagonal/Circular Cobblestone Plaza with 3D stone border
     const plazaDisk = new THREE.Mesh(
       new THREE.CylinderGeometry(8.2, 8.4, 0.09, 48),
       makeCobbleMat(6, 6)
     );
     plazaDisk.position.y = 0.045;
     plazaDisk.receiveShadow = true;
-    scene.add(plazaDisk);
+    fukuokaWorldGroup.add(plazaDisk);
 
     const trimStoneMat = new THREE.MeshStandardMaterial({
       color: 0xd6d3d1,
@@ -1360,17 +1530,15 @@
     innerRing.rotation.x = -Math.PI / 2;
     innerRing.position.y = 0.095;
     innerRing.receiveShadow = true;
-    scene.add(innerRing);
+    fukuokaWorldGroup.add(innerRing);
 
-    // 4.3 Recessed Mirror-Reflective Uneven Puddles (地上凹凸積水窪 + 倒影微光)
-    // Inspired by Godot's puddle decal / roughness modulation + animated rain rings
+    // 4.8 Recessed Mirror-Reflective Uneven Puddles
     const puddleShaderUniforms = {
       uTime: { value: 0.0 },
       uRainIntensity: { value: 0.25 },
       uSkyColor: { value: new THREE.Color(0xfdba74) },
       uLightColor: { value: new THREE.Color(0xfef08a) }
     };
-
     const puddleMat = new THREE.ShaderMaterial({
       uniforms: puddleShaderUniforms,
       transparent: true,
@@ -1396,27 +1564,23 @@
         void main() {
           vec2 p = vUv * 2.0 - 1.0;
           float dist = length(p);
-          // Organic uneven puddle shoreline using multi-frequency trig perturbation
           float angle = atan(p.y, p.x);
           float edgeNoise = sin(angle * 5.0 + vWorldPos.x) * 0.12
                           + cos(angle * 8.0 - vWorldPos.z) * 0.08;
           float mask = 1.0 - smoothstep(0.68 + edgeNoise, 0.96 + edgeNoise, dist);
           if (mask <= 0.01) discard;
 
-          // Concentric expanding rain ripples inside the puddle
           vec2 ruv1 = p * 4.5 + vec2(sin(vWorldPos.x), cos(vWorldPos.z));
           float r1 = sin(length(ruv1) * 10.0 - uTime * 7.5);
           vec2 ruv2 = (p + vec2(0.35, -0.25)) * 5.5;
           float r2 = sin(length(ruv2) * 12.0 - uTime * 8.5 + 1.7);
           float ripple = (r1 + r2) * 0.5 * smoothstep(1.0, 0.2, dist) * uRainIntensity;
 
-          // Mirror sky reflection + warm lantern glint + dark wet stone depth
           vec3 wetStone = vec3(0.10, 0.14, 0.20);
           vec3 skyRefl = mix(wetStone, uSkyColor * 0.85, 0.62);
           float spec = smoothstep(0.55, 0.95, sin(vWorldPos.x * 2.0 + uTime * 1.8 + ripple * 3.0)) * 0.45;
           vec3 col = skyRefl + uLightColor * (spec + max(0.0, ripple) * 0.55);
 
-          // Darkened wet rim at puddle edge (like real water soaking into stone)
           float wetRim = smoothstep(0.55 + edgeNoise, 0.85 + edgeNoise, dist);
           col = mix(col, wetStone * 0.65, wetRim * 0.55);
 
@@ -1440,14 +1604,13 @@
       pm.rotation.x = -Math.PI / 2;
       pm.rotation.z = p.rot;
       pm.position.set(p.x, 0.102, p.z);
-      scene.add(pm);
+      fukuokaWorldGroup.add(pm);
     });
 
     /* =======================================================================
-       5. Godot-Inspired Custom GLSL Water Shader (True Depth, Caustics, Fresnel & Foam)
+       5. GLSL Custom Water Shader (Fukuoka Muromi & Tucheng Dahan)
        ======================================================================= */
-    // Build custom River & Lotus Bay geometry with UV.x = 0 (left bank) -> 0.5 (deepest center) -> 1.0 (right bank)
-    function createWindingRiverGeometry(zMin, zMax, zSegments, xSegments, widthOffset = 0) {
+    function createWindingRiverGeometry(zMin, zMax, zSegments, xSegments, widthOffset = 0, riverCenterFn = getFukuokaRiverCenterX, riverWidthFn = getFukuokaRiverHalfWidth) {
       const geo = new THREE.BufferGeometry();
       const positions = [];
       const uvs = [];
@@ -1456,11 +1619,11 @@
       for (let iz = 0; iz <= zSegments; iz++) {
         const t = iz / zSegments;
         const z = zMin + t * (zMax - zMin);
-        const cx = getRiverCenterX(z);
-        const hw = getRiverHalfWidth(z) + widthOffset;
+        const cx = riverCenterFn(z);
+        const hw = riverWidthFn(z) + widthOffset;
 
         for (let ix = 0; ix <= xSegments; ix++) {
-          const s = ix / xSegments; // 0 at left shore, 0.5 at deep channel, 1 at right shore
+          const s = ix / xSegments;
           const x = cx + (s - 0.5) * 2.0 * hw;
           positions.push(x, 0, z);
           uvs.push(s, t * 10.0);
@@ -1486,32 +1649,12 @@
       return geo;
     }
 
-    // Physical sculpted underwater riverbed (pebbles & sand visible through shallow water)
-    const riverBedGeo = createWindingRiverGeometry(-42, 48, 140, 16, -0.1);
-    const rbPos = riverBedGeo.attributes.position;
-    const rbUv = riverBedGeo.attributes.uv;
-    for (let i = 0; i < rbPos.count; i++) {
-      const s = rbUv.getX(i);
-      const bankDist = 1.0 - Math.abs(s - 0.5) * 2.0; // 0 at shore, 1 at center
-      rbPos.setY(i, -0.05 - Math.pow(bankDist, 0.8) * 0.65);
-    }
-    riverBedGeo.computeVertexNormals();
-    const riverBedMat = new THREE.MeshStandardMaterial({
-      map: cobblePBR.map,
-      normalMap: cobblePBR.normalMap,
-      color: 0x334155,
-      roughness: 0.9
-    });
-    const riverBedMesh = new THREE.Mesh(riverBedGeo, riverBedMat);
-    scene.add(riverBedMesh);
-
-    // Custom GLSL Water Shader Uniforms (mirrors Godot ShaderMaterial water parameters)
     const waterUniforms = {
       uTime: { value: 0.0 },
-      uShallowColor: { value: new THREE.Color(0x14b8a6) }, // Emerald-turquoise shallow shore
-      uDeepColor: { value: new THREE.Color(0x082f49) },    // Deep sapphire abyss channel
-      uSkyColor: { value: new THREE.Color(0xfdba74) },     // Sky horizon reflection color
-      uSunColor: { value: new THREE.Color(0xfef08a) },     // Specular sun/moon/lantern glint
+      uShallowColor: { value: new THREE.Color(0x14b8a6) },
+      uDeepColor: { value: new THREE.Color(0x082f49) },
+      uSkyColor: { value: new THREE.Color(0xfdba74) },
+      uSunColor: { value: new THREE.Color(0xfef08a) },
       uSunDir: { value: new THREE.Vector3(0.5, 0.7, 0.4).normalize() }
     };
 
@@ -1528,11 +1671,9 @@
 
         void main() {
           vUv = uv;
-          // uv.x goes 0 (left bank) -> 0.5 (center) -> 1.0 (right bank)
           vShoreDist = 1.0 - abs(uv.x - 0.5) * 2.0;
 
           vec3 pos = position;
-          // Smooth multi-layered vertex waves (damped near shoreline so edges never clip!)
           float waveAmp = smoothstep(0.0, 0.35, vShoreDist) * 0.032;
           pos.y += (sin(pos.z * 1.4 + uTime * 2.2) + cos(pos.x * 1.8 - uTime * 1.7)) * waveAmp;
 
@@ -1548,17 +1689,9 @@
         uniform vec3 uSkyColor;
         uniform vec3 uSunColor;
         uniform vec3 uSunDir;
-
         varying vec2 vUv;
         varying vec3 vWorldPos;
         varying float vShoreDist;
-
-        // Procedural Dual-Wave Normal & Voronoi Caustic pattern (Godot-style procedural water)
-        float hash21(vec2 p) {
-          p = fract(p * vec2(123.34, 456.21));
-          p += dot(p, p + 45.32);
-          return fract(p.x * p.y);
-        }
 
         float causticPattern(vec2 uv, float t) {
           vec2 p = uv * 3.2;
@@ -1569,10 +1702,8 @@
         }
 
         void main() {
-          // 1. Water Depth Factor (0.0 at shore -> 1.0 in deep center channel)
           float depth = clamp(pow(vShoreDist, 0.72), 0.0, 1.0);
 
-          // 2. Dual-Layer Scrolling Wave Normals
           vec2 wUv1 = vWorldPos.xz * 0.55 + vec2(uTime * 0.18, uTime * 0.42);
           vec2 wUv2 = vWorldPos.xz * 0.85 + vec2(-uTime * 0.24, uTime * 0.31);
           float nx = sin(wUv1.x * 4.0 + cos(wUv1.y * 3.5)) * 0.16
@@ -1581,27 +1712,22 @@
                    + sin(wUv2.y * 5.0 + cos(wUv2.x * 4.2)) * 0.12;
           vec3 N = normalize(vec3(nx, 1.0, nz));
 
-          // 3. Underwater Caustics & Riverbed Stones in Shallow-to-Mid Water
           float caustics1 = causticPattern(vWorldPos.xz * 0.45 + N.xz * 0.35, uTime);
           float caustics2 = causticPattern(vWorldPos.xz * 0.62 - N.xz * 0.25 + 1.7, uTime * 0.85);
           float caustics = (caustics1 + caustics2 * 0.7) * (1.0 - depth * 0.65);
 
-          // 4. Depth Color Absorption (Beer-Lambert inspired shallow emerald -> deep sapphire)
           vec3 waterBase = mix(uShallowColor, uDeepColor, smoothstep(0.08, 0.88, depth));
           waterBase += uShallowColor * caustics * 0.48;
 
-          // 5. Fresnel Sky Reflection (Schlick approximation)
           vec3 V = normalize(cameraPosition - vWorldPos);
           float NoV = clamp(dot(N, V), 0.0, 1.0);
           float fresnel = pow(1.0 - NoV, 3.2);
           vec3 reflectedSky = mix(waterBase, uSkyColor * 0.95, clamp(fresnel * 0.78 + 0.14, 0.0, 0.85));
 
-          // 6. Specular Sun / Moon / Lantern Shimmer Glints on Wave Crests
           vec3 H = normalize(uSunDir + V);
           float NoH = max(0.0, dot(N, H));
           float specGlint = pow(NoH, 96.0) * 1.65 + pow(NoH, 24.0) * 0.32;
 
-          // 7. Shoreline Contact Foam (animated lacy white water edge at shore)
           float foamNoise = sin(vWorldPos.z * 3.5 + uTime * 2.5) * 0.04
                           + cos(vWorldPos.z * 7.0 - uTime * 1.8) * 0.025;
           float shoreFoam = 1.0 - smoothstep(0.02, 0.13 + foamNoise, vShoreDist);
@@ -1611,7 +1737,6 @@
           vec3 finalColor = reflectedSky + uSunColor * specGlint;
           finalColor = mix(finalColor, vec3(0.94, 0.98, 1.0), totalFoam * 0.82);
 
-          // 8. Depth-based Alpha (crystal clear at shore edge -> rich 0.94 opacity in deep channel)
           float alpha = mix(0.58, 0.95, smoothstep(0.0, 0.35, vShoreDist));
           alpha = max(alpha, totalFoam * 0.85);
 
@@ -1620,14 +1745,37 @@
       `
     });
 
-    const riverWaterGeo = createWindingRiverGeometry(-42, 48, 160, 24, 0);
+    // 5.1 Fukuoka Riverbed & River Surface Mesh (Z: -78 to +78)
+    const fukuokaRiverBedGeo = createWindingRiverGeometry(-78, 78, 220, 16, -0.15, getFukuokaRiverCenterX, getFukuokaRiverHalfWidth);
+    const frbPos = fukuokaRiverBedGeo.attributes.position;
+    const frbUv = fukuokaRiverBedGeo.attributes.uv;
+    for (let i = 0; i < frbPos.count; i++) {
+      const s = frbUv.getX(i);
+      const bankDist = 1.0 - Math.abs(s - 0.5) * 2.0;
+      frbPos.setY(i, -0.05 - Math.pow(bankDist, 0.8) * 0.65);
+    }
+    fukuokaRiverBedGeo.computeVertexNormals();
 
-    // Hakata Bay Open Coastal Waters & Beach Strip
+    const riverBedMat = new THREE.MeshStandardMaterial({
+      map: cobblePBR.map,
+      normalMap: cobblePBR.normalMap,
+      color: 0x334155,
+      roughness: 0.9
+    });
+    const fukuokaRiverBedMesh = new THREE.Mesh(fukuokaRiverBedGeo, riverBedMat);
+    fukuokaWorldGroup.add(fukuokaRiverBedMesh);
+
+    const fukuokaRiverWaterGeo = createWindingRiverGeometry(-78, 78, 240, 24, 0, getFukuokaRiverCenterX, getFukuokaRiverHalfWidth);
+    const fukuokaRiverMesh = new THREE.Mesh(fukuokaRiverWaterGeo, riverWaterMat);
+    fukuokaRiverMesh.position.y = 0.07;
+    fukuokaWorldGroup.add(fukuokaRiverMesh);
+
+    // Hakata Bay Open Waters & Beach Strip
     const bayWaterGeo = new THREE.PlaneGeometry(180, 80, 60, 30);
     const bayWaterMesh = new THREE.Mesh(bayWaterGeo, riverWaterMat);
     bayWaterMesh.rotation.x = -Math.PI / 2;
-    bayWaterMesh.position.set(0, 0.04, -78);
-    scene.add(bayWaterMesh);
+    bayWaterMesh.position.set(0, 0.04, -84);
+    fukuokaWorldGroup.add(bayWaterMesh);
 
     const beachGeo = new THREE.PlaneGeometry(180, 12, 36, 4);
     const beachMat = new THREE.MeshStandardMaterial({
@@ -1637,48 +1785,30 @@
     });
     const beachMesh = new THREE.Mesh(beachGeo, beachMat);
     beachMesh.rotation.x = -Math.PI / 2;
-    beachMesh.position.set(0, 0.22, -39.0);
-    scene.add(beachMesh);
-    const riverMesh = new THREE.Mesh(riverWaterGeo, riverWaterMat);
-    riverMesh.position.y = 0.07;
-    scene.add(riverMesh);
+    beachMesh.position.set(0, 0.22, -43.0);
+    fukuokaWorldGroup.add(beachMesh);
 
-    // Sculpted 3D Mossy Riverbank Stones along both shores
-    const bankRockMat = new THREE.MeshStandardMaterial({
-      color: 0x64748b,
-      normalMap: cobblePBR.normalMap,
-      normalScale: new THREE.Vector2(1.6, 1.6),
-      roughness: 0.72,
-      metalness: 0.12
-    });
-    const bankMossMat = new THREE.MeshStandardMaterial({
-      map: grassTerrainPBR.map,
-      normalMap: grassTerrainPBR.normalMap,
-      color: 0x4d7c0f,
-      roughness: 0.85
-    });
+    // 5.2 Tucheng Dahan River Surface & Riverbed Mesh
+    const tuchengRiverWaterGeo = createWindingRiverGeometry(-78, -26, 80, 24, 0, getTuchengRiverCenterX, getTuchengRiverHalfWidth);
+    const tuchengRiverMesh = new THREE.Mesh(tuchengRiverWaterGeo, riverWaterMat);
+    tuchengRiverMesh.position.y = 0.25;
+    tuchengWorldGroup.add(tuchengRiverMesh);
 
-    for (let z = -25; z <= 25; z += 0.85) {
-      if (Math.abs(z) < 2.35) continue; // Leave bridge crossing clear
-      const cx = getRiverCenterX(z);
-      const hw = getRiverHalfWidth(z);
-      [-1, 1].forEach(side => {
-        const bx = cx + side * (hw + 0.25 + (Math.abs(Math.sin(z * 2.3)) * 0.25));
-        const rSize = 0.42 + (Math.abs(Math.cos(z * 1.9 + side)) * 0.38);
-        const rock = new THREE.Mesh(
-          new THREE.DodecahedronGeometry(rSize, 1),
-          Math.abs(Math.round(z * 2)) % 3 === 0 ? bankMossMat : bankRockMat
-        );
-        rock.position.set(bx, 0.08, z);
-        rock.scale.set(1.25, 0.52, 1.15);
-        rock.rotation.set(z * 0.4, z * 0.9, side * 0.3);
-        rock.castShadow = true;
-        rock.receiveShadow = true;
-        scene.add(rock);
-      });
+    const tuchengRiverBedGeo = createWindingRiverGeometry(-78, -26, 80, 16, -0.2, getTuchengRiverCenterX, getTuchengRiverHalfWidth);
+    const trbPos = tuchengRiverBedGeo.attributes.position;
+    const trbUv = tuchengRiverBedGeo.attributes.uv;
+    for (let i = 0; i < trbPos.count; i++) {
+      const s = trbUv.getX(i);
+      const bankDist = 1.0 - Math.abs(s - 0.5) * 2.0;
+      trbPos.setY(i, 0.05 - Math.pow(bankDist, 0.75) * 0.45);
     }
+    tuchengRiverBedGeo.computeVertexNormals();
+    const tuchengRiverBedMesh = new THREE.Mesh(tuchengRiverBedGeo, riverBedMat);
+    tuchengWorldGroup.add(tuchengRiverBedMesh);
 
-    // Floating Lotus Pads, Multi-Petal Water Lilies, Glowing Lotus Lanterns & Koi Fish
+    // =======================================================================
+    // 6. Fukuoka World Assets: Floating Lotus, Bridge, Botanical Trees
+    // =======================================================================
     const lotusPadMat = new THREE.MeshStandardMaterial({
       color: 0x15803d,
       normalMap: grassTerrainPBR.normalMap,
@@ -1693,7 +1823,7 @@
     });
     const lotusCoreMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
     const floatingLanterns = [];
-    const pondCenterX = getRiverCenterX(-3.0);
+    const pondCenterX = getFukuokaRiverCenterX(-3.0);
     const pondCenterZ = -3.0;
 
     const lotusCoords = [
@@ -1703,7 +1833,6 @@
     ];
     lotusCoords.forEach(([dx, dz], idx) => {
       const padGroup = new THREE.Group();
-      // Notched lily pad
       const pad = new THREE.Mesh(
         new THREE.CylinderGeometry(0.58, 0.58, 0.025, 20, 1, false, 0.25, Math.PI * 1.85),
         lotusPadMat
@@ -1713,7 +1842,6 @@
       padGroup.add(pad);
 
       if (idx % 2 === 0) {
-        // Multi-petal 3D water lily flower (8 outer + 6 inner petals)
         const flowerGroup = new THREE.Group();
         for (let p = 0; p < 8; p++) {
           const petal = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.32, 5), lotusFlowerMat);
@@ -1736,11 +1864,11 @@
         }
       }
       padGroup.position.set(pondCenterX + dx, 0.09, pondCenterZ + dz);
-      scene.add(padGroup);
+      fukuokaWorldGroup.add(padGroup);
       floatingLanterns.push({ mesh: padGroup, baseX: pondCenterX + dx, baseZ: pondCenterZ + dz, phase: idx * 0.9 });
     });
 
-    // Articulated Koi Fish swimming beneath the semi-transparent water surface
+    // Articulated Koi Fish in Muromi River
     const koiBodyMat = new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xea580c, emissiveIntensity: 0.25, roughness: 0.2 });
     const koiWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25 });
     const koiList = [];
@@ -1757,12 +1885,11 @@
       tail.rotation.x = Math.PI / 2;
       tail.position.z = -0.38;
       koi.add(tail);
-      scene.add(koi);
+      fukuokaWorldGroup.add(koi);
       koiList.push({ mesh: koi, tail, angle: k * 1.05, radius: 1.4 + (k % 3) * 0.95, speed: 0.48 + k * 0.07 });
     }
 
-    // Japanese Vermilion Lacquered Arched Bridge (跨越蜿蜒溪流與荷花灣的朱紅拱橋)
-    // bridgeCenterX declared in part3a
+    // Japanese Lacquered Arched Muromi Bridge (室見橋)
     function createArchedBridge(x, z) {
       const bg = new THREE.Group();
       const woodDeckMat = new THREE.MeshStandardMaterial({
@@ -1776,65 +1903,55 @@
         roughness: 0.28,
         metalness: 0.18
       });
-      const goldCapMat = new THREE.MeshStandardMaterial({
-        color: 0xfbbf24,
-        roughness: 0.22,
-        metalness: 0.85
+      const stonePierMat = new THREE.MeshStandardMaterial({
+        color: 0x94a3b8,
+        normalMap: cobblePBR.normalMap,
+        roughness: 0.8
       });
 
-      const span = 8.4;
-      const steps = 20;
-      for (let i = 0; i <= steps; i++) {
-        const t = (i / steps) - 0.5;
-        const bx = t * span;
-        const by = Math.cos(t * Math.PI) * 0.92;
-        const plank = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 3.4), woodDeckMat);
-        plank.position.set(bx, by, 0);
-        plank.rotation.z = -Math.sin(t * Math.PI) * 0.26;
-        plank.castShadow = true;
-        plank.receiveShadow = true;
+      const spanSteps = 24;
+      const spanW = 10.8;
+      for (let s = 0; s < spanSteps; s++) {
+        const t1 = (s / spanSteps) - 0.5;
+        const t2 = ((s + 1) / spanSteps) - 0.5;
+        const px = (t1 + t2) * 0.5 * spanW;
+        const py = Math.cos(px / (spanW * 0.5) * (Math.PI * 0.5)) * 1.15 + 0.95;
+        const plank = new THREE.Mesh(new THREE.BoxGeometry(spanW / spanSteps + 0.04, 0.18, 3.8), woodDeckMat);
+        plank.position.set(px, py, 0);
+        plank.castShadow = true; plank.receiveShadow = true;
         bg.add(plank);
 
-        if (i % 4 === 0) {
-          [-1.55, 1.55].forEach(rz => {
-            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.10, 1.05, 10), redRailMat);
-            post.position.set(bx, by + 0.52, rz);
-            post.castShadow = true;
-            bg.add(post);
-            const cap = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 12), goldCapMat);
-            cap.position.set(bx, by + 1.08, rz);
-            bg.add(cap);
-          });
-        }
+        [-1.75, 1.75].forEach(rz => {
+          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.85, 8), redRailMat);
+          post.position.set(px, py + 0.45, rz);
+          post.castShadow = true;
+          bg.add(post);
+        });
       }
 
-      // Curved handrails
-      [-1.55, 1.55].forEach(rz => {
-        for (let i = 0; i < steps; i++) {
-          const t1 = (i / steps) - 0.5;
-          const t2 = ((i + 1) / steps) - 0.5;
-          const x1 = t1 * span, y1 = Math.cos(t1 * Math.PI) * 0.92 + 0.85;
-          const x2 = t2 * span, y2 = Math.cos(t2 * Math.PI) * 0.92 + 0.85;
-          const len = Math.hypot(x2 - x1, y2 - y1);
-          const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, len + 0.04, 8), redRailMat);
-          rail.position.set((x1 + x2) * 0.5, (y1 + y2) * 0.5, rz);
-          rail.rotation.z = Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2;
-          bg.add(rail);
-        }
+      [-1.75, 1.75].forEach(rz => {
+        const railCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(-spanW * 0.5, 0.95 + 0.82, rz),
+          new THREE.Vector3(0, 1.15 + 0.95 + 0.82, rz),
+          new THREE.Vector3(spanW * 0.5, 0.95 + 0.82, rz)
+        ]);
+        const railMesh = new THREE.Mesh(new THREE.TubeGeometry(railCurve, 20, 0.07, 8, false), redRailMat);
+        railMesh.castShadow = true;
+        bg.add(railMesh);
       });
 
-      // Bridge stone abutments at both ends
-      [-span * 0.5, span * 0.5].forEach(ex => {
-        const abut = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 3.8), trimStoneMat);
-        abut.position.set(ex, 0.15, 0);
-        abut.receiveShadow = true;
-        bg.add(abut);
+      [-3.2, 3.2].forEach(px => {
+        const pier = new THREE.Mesh(new THREE.BoxGeometry(0.65, 2.2, 3.2), stonePierMat);
+        pier.position.set(px, 0.35, 0);
+        pier.castShadow = true;
+        bg.add(pier);
       });
 
-      bg.position.set(x, 0.06, z);
-      scene.add(bg);
+      bg.position.set(x, 0, z);
+      fukuokaWorldGroup.add(bg);
+      return bg;
     }
-    createArchedBridge(bridgeCenterX, 0);
+    createArchedBridge(fukuokaBridgeCenterX, 0);
 
     /* =======================================================================
        6. High-Detail Multi-Branch 3D Botanical Trees (Sakura & Pine)
@@ -2083,6 +2200,8 @@
       grassBlades.push({ mesh: tuft, phase: i * 0.4 });
     }
 
+
+
     // =======================================================================
     // 7. Fukuoka Iconic Landscapes: Atago Shrine atop Mt. Atago (X: -26, Z: -26)
     // =======================================================================
@@ -2093,7 +2212,6 @@
     const shrineRoofMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.45 });
     const shrineGoldMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.8, roughness: 0.25 });
 
-    // Shrine Main Worship Hall (拜殿)
     const shrinePlat = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.7, 5.4), shrineWoodMat);
     shrinePlat.position.y = 0.35;
     atagoGroup.add(shrinePlat);
@@ -2102,21 +2220,18 @@
     shrineBody.position.y = 2.1;
     atagoGroup.add(shrineBody);
 
-    // Vermilion pillars
     [[-2.4, -2.0], [2.4, -2.0], [-2.4, 2.0], [2.4, 2.0], [0, -2.0]].forEach(([px, pz]) => {
       const pil = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 2.9, 12), shrineVermilionMat);
       pil.position.set(px, 2.15, pz);
       atagoGroup.add(pil);
     });
 
-    // Curved Traditional Hip-and-Gable Shrine Roof
     const sRoofLower = new THREE.Mesh(new THREE.ConeGeometry(4.8, 1.6, 4), shrineRoofMat);
     sRoofLower.rotation.y = Math.PI / 4;
     sRoofLower.position.y = 4.3;
     sRoofLower.scale.set(1.4, 0.8, 1.2);
     atagoGroup.add(sRoofLower);
 
-    // Vermilion Offering Box (賽錢箱) & Golden Bell Rope
     const offerBox = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 0.65), shrineVermilionMat);
     offerBox.position.set(0, 1.1, -2.2);
     const bellRope = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 8), shrineVermilionMat);
@@ -2126,10 +2241,7 @@
     atagoGroup.add(offerBox, bellRope, bell);
 
     atagoGroup.position.set(-26, 9.6, -26);
-    scene.add(atagoGroup);
-
-    // Grand Vermilion Torii Gate at entrance of Mt. Atago
-    createTorii(-26, -21, 0);
+    fukuokaWorldGroup.add(atagoGroup);
 
     // =======================================================================
     // 8. Deep Sawara Rice Terraces (梯田), Irrigation Canal & Rotating Watermill
@@ -2145,7 +2257,6 @@
     const riceCropMat = new THREE.MeshStandardMaterial({ color: 0x84cc16, roughness: 0.65 });
     const riceGoldCropMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.65 });
 
-    // 3 Terraced Paddy Plots (X: -32 to -8, Z: 14 to 50)
     const paddyTiers = [
       { zMin: 14, zMax: 23, y: 1.45, w: 22, h: 8.5 },
       { zMin: 26, zMax: 35, y: 3.05, w: 22, h: 8.5 },
@@ -2157,43 +2268,25 @@
       pMesh.rotation.x = -Math.PI / 2;
       const cz = (tier.zMin + tier.zMax) / 2;
       pMesh.position.set(-20, tier.y, cz);
-      scene.add(pMesh);
+      fukuokaWorldGroup.add(pMesh);
 
-      // Earthen Berm Borders (畦道)
       const bermGeo = new THREE.BoxGeometry(tier.w + 0.6, 0.28, 0.5);
       const bNorth = new THREE.Mesh(bermGeo, paddyBermMat);
       bNorth.position.set(-20, tier.y + 0.14, tier.zMin);
       const bSouth = new THREE.Mesh(bermGeo, paddyBermMat);
       bSouth.position.set(-20, tier.y + 0.14, tier.zMax);
-      scene.add(bNorth, bSouth);
+      fukuokaWorldGroup.add(bNorth, bSouth);
 
-      // Rice Stalk Clusters in rows
       const cropMat = tIdx === 1 ? riceGoldCropMat : riceCropMat;
       for (let rx = -29; rx <= -11; rx += 1.8) {
         for (let rz = tier.zMin + 1.2; rz <= tier.zMax - 1.2; rz += 1.6) {
           const stalk = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.65, 5), cropMat);
           stalk.position.set(rx + (Math.random() - 0.5) * 0.3, tier.y + 0.32, rz + (Math.random() - 0.5) * 0.3);
-          scene.add(stalk);
+          fukuokaWorldGroup.add(stalk);
         }
       }
     });
 
-    // Straw-hat Scarecrow (案山子)
-    const scarecrow = new THREE.Group();
-    const scPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6), shrineWoodMat);
-    scPole.position.y = 0.9;
-    const scCross = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.3, 6), shrineWoodMat);
-    scCross.rotation.z = Math.PI / 2;
-    scCross.position.y = 1.35;
-    const scHead = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), shrinePlasterMat);
-    scHead.position.y = 1.7;
-    const scHat = new THREE.Mesh(new THREE.ConeGeometry(0.48, 0.22, 10), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.9 }));
-    scHat.position.y = 1.88;
-    scarecrow.add(scPole, scCross, scHead, scHat);
-    scarecrow.position.set(-18, 3.1, 30);
-    scene.add(scarecrow);
-
-    // Rustic Farmhouse & Animated Rotating Watermill (水車小屋)
     const millGroup = new THREE.Group();
     const millCottage = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.6, 4.2), shrineWoodMat);
     millCottage.position.y = 1.3;
@@ -2203,7 +2296,6 @@
     millRoof.scale.set(1.15, 0.9, 1.3);
     millGroup.add(millCottage, millRoof);
 
-    // The Rotating Waterwheel Group (attached to East wall over stream canal)
     const wheelGroup = new THREE.Group();
     const wheelRimMat = new THREE.MeshStandardMaterial({ color: 0x5c2b09, roughness: 0.8 });
     const wheelRim1 = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.06, 8, 24), wheelRimMat);
@@ -2211,7 +2303,6 @@
     wheelRim2.position.z = 0.35;
     wheelGroup.add(wheelRim1, wheelRim2);
 
-    // 8 Spokes & Water Buckets
     for (let sp = 0; sp < 8; sp++) {
       const spAngle = sp * (Math.PI / 4);
       const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.35, 0.08), wheelRimMat);
@@ -2223,10 +2314,10 @@
     }
     wheelGroup.position.set(1.95, 1.4, 0);
     millGroup.add(wheelGroup);
-    window.watermillWheel = wheelGroup; // Animated in gen_part4.py
+    window.watermillWheel = wheelGroup;
 
     millGroup.position.set(-13, 1.4, 25);
-    scene.add(millGroup);
+    fukuokaWorldGroup.add(millGroup);
 
     // =======================================================================
     // 9. Mt. Aburayama Summit Lookout (油山展望台 X: 38, Z: 32, Y: 24.5)
@@ -2235,12 +2326,10 @@
     const deckWoodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.72 });
     const deckRailMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.85 });
 
-    // Wooden Observation Platform
     const deckFloor = new THREE.Mesh(new THREE.BoxGeometry(8.5, 0.45, 7.5), deckWoodMat);
     deckFloor.position.y = 0.22;
     aburaDeckGroup.add(deckFloor);
 
-    // Perimeter Railings & Posts
     for (let rx = -4.1; rx <= 4.1; rx += 1.35) {
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.1, 8), deckRailMat);
       post.position.set(rx, 0.8, -3.65);
@@ -2257,52 +2346,29 @@
     topRailW.position.set(-4.15, 1.35, 0);
     aburaDeckGroup.add(topRailN, topRailW);
 
-    // Observation Park Benches
-    const benchMat = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.65 });
-    const bench1 = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.45, 0.65), benchMat);
-    bench1.position.set(1.5, 0.5, 1.8);
-    aburaDeckGroup.add(bench1);
-
-    // Summit Signpost Pole
-    const signPost = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 2.2, 8), deckRailMat);
-    signPost.position.set(3.2, 1.1, -2.6);
-    const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.1, 0.65), shrineWoodMat);
-    signBoard.position.set(3.2, 1.7, -2.6);
-    aburaDeckGroup.add(signPost, signBoard);
-
-    // Coin-operated Tourist Binoculars (雙筒望遠鏡模型) aimed at Fukuoka City & Airport!
     const binoStand = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 1.4, 12), new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7, roughness: 0.3 }));
     binoStand.position.set(-1.8, 0.9, -3.2);
     const binoScope = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.22, 0.55), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.6, roughness: 0.3 }));
-    binoScope.rotation.x = 0.15; // Angled slightly down looking over the city
-    binoScope.rotation.y = -0.45; // Facing northwest toward city & airport
+    binoScope.rotation.x = 0.15;
+    binoScope.rotation.y = -0.45;
     binoScope.position.set(-1.8, 1.62, -3.2);
     aburaDeckGroup.add(binoStand, binoScope);
 
     aburaDeckGroup.position.set(38, 24.5, 32);
-    scene.add(aburaDeckGroup);
+    fukuokaWorldGroup.add(aburaDeckGroup);
 
     // =======================================================================
-    // 10. Fukuoka Airport (FUK) Runway & Dynamic Passenger Aircraft System
+    // 10. Fukuoka Airport Runway & Aircraft
     // =======================================================================
     const airportGroup = new THREE.Group();
-    const runwayMat = new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
-      roughness: 0.92,
-      metalness: 0.05
-    });
+    const runwayMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.92, metalness: 0.05 });
     const runwayMarkingMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
-    const runwayGreenLightMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
-    const runwayWhiteLightMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
-    const runwayRedLightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
 
-    // Main Runway (Length 38m, Width 3.6m, oriented roughly NE-SW)
     const runwayMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 38, 1, 1), runwayMat);
     runwayMesh.rotation.x = -Math.PI / 2;
     runwayMesh.position.set(0, 0.06, 0);
     airportGroup.add(runwayMesh);
 
-    // Dashed Runway Centerline Stripes
     for (let rz = -16; rz <= 16; rz += 3.2) {
       const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 1.6), runwayMarkingMat);
       stripe.rotation.x = -Math.PI / 2;
@@ -2310,33 +2376,19 @@
       airportGroup.add(stripe);
     }
 
-    // Runway Approach Green Threshold Lights & Edge Lights
-    for (let edgeX of [-1.9, 1.9]) {
-      for (let rz = -18; rz <= 18; rz += 4.5) {
-        const lightMesh = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), (rz === -18 ? runwayGreenLightMat : (rz === 18 ? runwayRedLightMat : runwayWhiteLightMat)));
-        lightMesh.position.set(edgeX, 0.12, rz);
-        airportGroup.add(lightMesh);
-      }
-    }
-
-    // Airport Control Tower (X: 52, Z: -8)
     const towerBase = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.9, 5.2, 12), shrinePlasterMat);
     towerBase.position.set(4.5, 2.6, -6.0);
     const towerCabin = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.8, 1.4, 12), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.2, metalness: 0.6 }));
     towerCabin.position.set(4.5, 5.6, -6.0);
-    const towerBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
-    towerBeacon.position.set(4.5, 6.5, -6.0);
-    airportGroup.add(towerBase, towerCabin, towerBeacon);
+    airportGroup.add(towerBase, towerCabin);
 
     airportGroup.position.set(44, 0.95, -10);
-    scene.add(airportGroup);
+    fukuokaWorldGroup.add(airportGroup);
 
-    // 3D Passenger Jet Airplane Model (Fukuoka Airport Flight Loop)
     const planeGroup = new THREE.Group();
     const planeBodyMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.35, metalness: 0.4 });
     const planeBlueMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.35, metalness: 0.4 });
 
-    // Fuselage & Nose
     const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.35, 4.4, 14), planeBodyMat);
     fuselage.rotation.x = Math.PI / 2;
     const noseCone = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.85, 14), planeBlueMat);
@@ -2344,35 +2396,506 @@
     noseCone.position.z = -2.6;
     planeGroup.add(fuselage, noseCone);
 
-    // Swept Main Wings & Engines
     const wings = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.06, 0.95), planeBodyMat);
     wings.position.set(0, 0, -0.2);
-    const leftEng = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.72, 10), new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7 }));
-    leftEng.rotation.x = Math.PI / 2;
-    leftEng.position.set(-1.1, -0.25, -0.1);
-    const rightEng = leftEng.clone();
-    rightEng.position.x = 1.1;
-    planeGroup.add(wings, leftEng, rightEng);
+    planeGroup.add(wings);
 
-    // Tail Fin & Horizontal Stabilizers
     const tailFin = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.1, 0.75), planeBlueMat);
     tailFin.position.set(0, 0.65, 1.8);
-    const tailWings = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.05, 0.45), planeBodyMat);
-    tailWings.position.set(0, 0.25, 2.0);
-    planeGroup.add(tailFin, tailWings);
-
-    // Wingtip Navigation & Anti-Collision Strobe Lights
-    const leftStrobe = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
-    leftStrobe.position.set(-2.3, 0.02, -0.2);
-    const rightStrobe = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
-    rightStrobe.position.set(2.3, 0.02, -0.2);
-    const tailBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0xf8fafc }));
-    tailBeacon.position.set(0, 1.25, 1.95);
-    planeGroup.add(leftStrobe, rightStrobe, tailBeacon);
+    planeGroup.add(tailFin);
 
     planeGroup.position.set(44, 1.2, -10);
-    scene.add(planeGroup);
-    window.airplaneGroup = planeGroup; // Handled in gen_part4.py flight cycle!
+    fukuokaWorldGroup.add(planeGroup);
+    window.airplaneGroup = planeGroup;
+
+    // =======================================================================
+    // 11. NEW: Fukuoka Infill Townscape (Machiya, Residences, 24H Conbini & Embankments)
+    // =======================================================================
+    const fukuokaTownGroup = new THREE.Group();
+    const machiyaWallMat = new THREE.MeshStandardMaterial({ color: 0xe2d9be, roughness: 0.85 });
+    const machiyaWoodMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.75 });
+    const machiyaTileRoofMat = new THREE.MeshStandardMaterial({ color: 0x263238, roughness: 0.45, metalness: 0.1 });
+    const conbiniSignMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+
+    function createMachiya(x, z, rotY = 0) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.4, 4.0), machiyaWallMat);
+      body.position.y = 1.7;
+      body.castShadow = true; body.receiveShadow = true;
+      g.add(body);
+
+      const lattice = new THREE.Mesh(new THREE.BoxGeometry(3.6, 1.6, 0.12), machiyaWoodMat);
+      lattice.position.set(0, 1.0, 2.02);
+      g.add(lattice);
+
+      const eave1 = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.15, 1.2), machiyaTileRoofMat);
+      eave1.position.set(0, 2.0, 2.2);
+      eave1.rotation.x = 0.18;
+      g.add(eave1);
+
+      const mainRoof = new THREE.Mesh(new THREE.ConeGeometry(3.8, 1.5, 4), machiyaTileRoofMat);
+      mainRoof.rotation.y = Math.PI / 4;
+      mainRoof.position.y = 4.15;
+      mainRoof.scale.set(1.2, 0.9, 1.1);
+      mainRoof.castShadow = true;
+      g.add(mainRoof);
+
+      g.position.set(x, getFukuokaHeight(x, z), z);
+      g.rotation.y = rotY;
+      fukuokaTownGroup.add(g);
+      return g;
+    }
+
+    createMachiya(-14, -15, Math.PI / 2);
+    createMachiya(-14, -8, Math.PI / 2);
+    createMachiya(-14, 8, Math.PI / 2);
+    createMachiya(-14, 16, Math.PI / 2);
+
+    createMachiya(18, -14, -Math.PI / 2);
+    createMachiya(18, 8, -Math.PI / 2);
+    createMachiya(18, 16, -Math.PI / 2);
+
+    // 24H Convenience Store on East Bank
+    const conbiniGroup = new THREE.Group();
+    const conbiniBody = new THREE.Mesh(new THREE.BoxGeometry(6.2, 3.2, 5.0), new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 }));
+    conbiniBody.position.y = 1.6;
+    conbiniGroup.add(conbiniBody);
+
+    const signBox = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.65, 0.25), conbiniSignMat);
+    signBox.position.set(0, 2.8, 2.55);
+    const signOrangeStripe = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.18, 0.26), new THREE.MeshBasicMaterial({ color: 0xf97316 }));
+    signOrangeStripe.position.set(0, 2.5, 2.55);
+    conbiniGroup.add(signBox, signOrangeStripe);
+
+    const vendRed = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.8, 0.65), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
+    vendRed.position.set(3.4, 0.9, 1.8);
+    const vendBlue = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.8, 0.65), new THREE.MeshStandardMaterial({ color: 0x0284c7 }));
+    vendBlue.position.set(3.4, 0.9, 0.8);
+    conbiniGroup.add(vendRed, vendBlue);
+
+    conbiniGroup.position.set(18, getFukuokaHeight(18, -4), -4);
+    conbiniGroup.rotation.y = -Math.PI / 2;
+    fukuokaTownGroup.add(conbiniGroup);
+
+    // River Embankment Walls along Muromi River
+    for (let ez = -30; ez <= 30; ez += 2.2) {
+      if (Math.abs(ez) < 3.0) continue;
+      const cx = getFukuokaRiverCenterX(ez);
+      const hw = getFukuokaRiverHalfWidth(ez);
+      [-1, 1].forEach(side => {
+        const wallX = cx + side * (hw + 0.8);
+        const wallY = getFukuokaHeight(wallX, ez);
+        const wall = new THREE.Mesh(
+          new THREE.BoxGeometry(0.4, 0.65, 2.1),
+          new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.9 })
+        );
+        wall.position.set(wallX, wallY + 0.15, ez);
+        fukuokaTownGroup.add(wall);
+      });
+    }
+
+    fukuokaWorldGroup.add(fukuokaTownGroup);
+
+    // =======================================================================
+    // 12. NEW: Fukuoka Looping Road Cars (循環運行的汽車)
+    // =======================================================================
+    const carColors = [0xf8fafc, 0x0284c7, 0xdc2626, 0x475569];
+    const fukuokaCars = [];
+    const carMatList = carColors.map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.35, metalness: 0.6 }));
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+    const headlightMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const taillightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+
+    function createCar(matIndex = 0) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.65, 3.2), carMatList[matIndex]);
+      body.position.y = 0.52;
+      body.castShadow = true;
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.55, 1.8), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.1 }));
+      cabin.position.set(0, 1.05, -0.15);
+      g.add(body, cabin);
+
+      [[-0.82, -0.85], [0.82, -0.85], [-0.82, 0.85], [0.82, 0.85]].forEach(([wx, wz]) => {
+        const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.22, 12), wheelMat);
+        wh.rotation.z = Math.PI / 2;
+        wh.position.set(wx, 0.28, wz);
+        g.add(wh);
+      });
+
+      [-0.55, 0.55].forEach(hx => {
+        const hl = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.08), headlightMat);
+        hl.position.set(hx, 0.55, -1.62);
+        g.add(hl);
+      });
+      [-0.55, 0.55].forEach(hx => {
+        const tl = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.08), taillightMat);
+        tl.position.set(hx, 0.55, 1.62);
+        g.add(tl);
+      });
+
+      fukuokaWorldGroup.add(g);
+      return g;
+    }
+
+    for (let c = 0; c < 4; c++) {
+      const carGroup = createCar(c % carColors.length);
+      fukuokaCars.push({
+        mesh: carGroup,
+        progress: c * 0.25,
+        speed: 0.045
+      });
+    }
+    window.fukuokaCars = fukuokaCars;
+
+    // =======================================================================
+    // 13. NEW: Fukuoka City Subway Kuko Line & Muromi Station (福岡市地下鐵 空港線 室見站)
+    // =======================================================================
+    const subwayGroup = new THREE.Group();
+
+    const stationPavilion = new THREE.Group();
+    const portalMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5 });
+    const portal = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.4, 4.2), portalMat);
+    portal.position.y = 1.2;
+    stationPavilion.add(portal);
+
+    const subwaySign = new THREE.Mesh(
+      new THREE.BoxGeometry(3.2, 0.55, 0.2),
+      new THREE.MeshBasicMaterial({ color: 0x0284c7 })
+    );
+    subwaySign.position.set(0, 2.4, 2.15);
+    stationPavilion.add(subwaySign);
+
+    const stairs = new THREE.Mesh(
+      new THREE.BoxGeometry(2.4, 0.2, 3.2),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b })
+    );
+    stairs.position.set(0, 0.1, 0.2);
+    stationPavilion.add(stairs);
+
+    stationPavilion.position.set(14, getFukuokaHeight(14, -2.5), -2.5);
+    subwayGroup.add(stationPavilion);
+
+    // Subterranean Cutaway Tunnel passing UNDER Muromi Riverbed (Y: -1.6m)
+    const tunnelLength = 54;
+    const tunnelTube = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.4, 2.4, tunnelLength, 18, 1, true),
+      new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        roughness: 0.7,
+        side: THREE.BackSide,
+        transparent: true,
+        opacity: 0.85
+      })
+    );
+    tunnelTube.rotation.z = Math.PI / 2;
+    tunnelTube.position.set(fukuokaBridgeCenterX, -1.6, -2.5);
+    subwayGroup.add(tunnelTube);
+
+    [-0.45, 0.45].forEach(tz => {
+      const rail = new THREE.Mesh(
+        new THREE.BoxGeometry(tunnelLength, 0.08, 0.08),
+        new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 })
+      );
+      rail.position.set(fukuokaBridgeCenterX, -2.4, -2.5 + tz);
+      subwayGroup.add(rail);
+    });
+
+    // 4-Car Fukuoka Subway Train
+    const trainGroup = new THREE.Group();
+    const trainStainlessMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.25, metalness: 0.85 });
+    const trainBlueStripeMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
+    const trainWindowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+    for (let car = 0; car < 4; car++) {
+      const carG = new THREE.Group();
+      const carBody = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.45, 1.6), trainStainlessMat);
+      carBody.position.y = 0.8;
+      carG.add(carBody);
+
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(4.22, 0.22, 1.62), trainBlueStripeMat);
+      stripe.position.y = 0.65;
+      carG.add(stripe);
+
+      const winL = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.35, 1.64), trainWindowMat);
+      winL.position.y = 0.95;
+      carG.add(winL);
+
+      carG.position.x = (car - 1.5) * 4.4;
+      trainGroup.add(carG);
+    }
+
+    const trainLight = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    trainLight.position.set(7.5, 0.8, 0);
+    trainGroup.add(trainLight);
+
+    trainGroup.position.set(fukuokaBridgeCenterX, -2.4, -2.5);
+    subwayGroup.add(trainGroup);
+    window.fukuokaSubwayTrain = trainGroup;
+
+    fukuokaWorldGroup.add(subwayGroup);
+
+    // =======================================================================
+    // 14. NEW: Tucheng World (新北土城：大漢溪、高灘地河濱、防汛大堤、步梯公寓騎樓、油桐花天上山)
+    // =======================================================================
+    const tuchengParkGroup = new THREE.Group();
+    const tuchengTownGroup = new THREE.Group();
+    const tuchengMountainGroup = new THREE.Group();
+
+    // 14.1 Dahan River Wetland Reeds & Sandbars
+    const reedMat = new THREE.MeshStandardMaterial({ color: 0xa3e635, roughness: 0.8 });
+    for (let i = 0; i < 45; i++) {
+      const rx = (Math.random() - 0.5) * 60 - 15;
+      const rz = -42 + (Math.random() - 0.5) * 22;
+      const reed = new THREE.Mesh(new THREE.ConeGeometry(0.18, 1.4, 5), reedMat);
+      reed.position.set(rx, 0.35, rz);
+      tuchengParkGroup.add(reed);
+    }
+
+    // 14.2 High Floodplain Riverside Park: Asphalt Bike Path & Pavilions
+    const bikePathCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-60, 0.88, -22),
+      new THREE.Vector3(-30, 0.88, -16),
+      new THREE.Vector3(0, 0.88, -20),
+      new THREE.Vector3(30, 0.88, -14),
+      new THREE.Vector3(60, 0.88, -18)
+    ]);
+    const bikePathGeo = new THREE.TubeGeometry(bikePathCurve, 60, 1.2, 6, false);
+    const bikePathMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
+    const bikePathMesh = new THREE.Mesh(bikePathGeo, bikePathMat);
+    bikePathMesh.scale.set(1, 0.05, 1);
+    tuchengParkGroup.add(bikePathMesh);
+
+    const gazeboMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.6 });
+    const gazeboRoofMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
+    const gazebo = new THREE.Group();
+    [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]].forEach(([gx, gz]) => {
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.2, 8), gazeboMat);
+      p.position.set(gx, 1.1, gz);
+      gazebo.add(p);
+    });
+    const gzRoof = new THREE.Mesh(new THREE.ConeGeometry(2.4, 0.85, 4), gazeboRoofMat);
+    gzRoof.rotation.y = Math.PI / 4;
+    gzRoof.position.y = 2.6;
+    gazebo.add(gzRoof);
+    gazebo.position.set(-8, 0.85, -12);
+    tuchengParkGroup.add(gazebo);
+
+    tuchengWorldGroup.add(tuchengParkGroup);
+
+    // 14.3 Concrete Flood Control Dike (擺接堡路防汛大堤防)
+    const dikeRoadMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 });
+    const dikeDashedMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+
+    const dikeRoad = new THREE.Mesh(new THREE.PlaneGeometry(160, 4.6), dikeRoadMat);
+    dikeRoad.rotation.x = -Math.PI / 2;
+    dikeRoad.position.set(0, 3.68, 4.0);
+    tuchengWorldGroup.add(dikeRoad);
+
+    for (let rx = -70; rx <= 70; rx += 4.5) {
+      const line = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.16), dikeDashedMat);
+      line.rotation.x = -Math.PI / 2;
+      line.position.set(rx, 3.70, 4.0);
+      tuchengWorldGroup.add(line);
+    }
+
+    // Concrete Flood Sluice Watergate (城林防汛水門)
+    const watergateGroup = new THREE.Group();
+    const towerMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.8 });
+    const gateRedMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.3 });
+
+    [-3.2, 3.2].forEach(tx => {
+      const tower = new THREE.Mesh(new THREE.BoxGeometry(1.6, 6.2, 2.2), towerMat);
+      tower.position.set(tx, 3.1, 0);
+      watergateGroup.add(tower);
+    });
+    const steelGate = new THREE.Mesh(new THREE.BoxGeometry(5.2, 3.8, 0.4), gateRedMat);
+    steelGate.position.set(0, 2.2, 0);
+    watergateGroup.add(steelGate);
+
+    watergateGroup.position.set(-18, 0.85, 0.5);
+    tuchengWorldGroup.add(watergateGroup);
+
+    // 14.4 Taiwanese Urban Walk-Up Apartments with Iron Grilles & Rooftop Water Tanks
+    const twTileBeigeMat = new THREE.MeshStandardMaterial({ color: 0xd6c7b2, roughness: 0.7 });
+    const twTileRedMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.65 });
+    const twIronGrilleMat = new THREE.MeshStandardMaterial({ color: 0x15803d, metalness: 0.6, roughness: 0.4 });
+    const twStainlessMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.95, roughness: 0.15 });
+
+    function createTaiwaneseApartment(x, z, rotY = 0) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(6.5, 7.8, 6.2), twTileBeigeMat);
+      body.position.y = 3.9;
+      body.castShadow = true; body.receiveShadow = true;
+      g.add(body);
+
+      const arcadePillar1 = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.4, 0.45), twTileRedMat);
+      arcadePillar1.position.set(-2.8, 1.2, 3.2);
+      const arcadePillar2 = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.4, 0.45), twTileRedMat);
+      arcadePillar2.position.set(2.8, 1.2, 3.2);
+      g.add(arcadePillar1, arcadePillar2);
+
+      [3.2, 5.2, 7.2].forEach(by => {
+        const balcony = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.2, 0.85), twTileRedMat);
+        balcony.position.set(0, by, 3.4);
+        const ironGrille = new THREE.Mesh(new THREE.BoxGeometry(5.6, 1.1, 0.08), twIronGrilleMat);
+        ironGrille.position.set(0, by + 0.65, 3.8);
+        g.add(balcony, ironGrille);
+      });
+
+      const rooftopTin = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.8, 4.8), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.5 }));
+      rooftopTin.position.set(0, 8.7, 0);
+      g.add(rooftopTin);
+
+      const waterTank = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.5, 16), twStainlessMat);
+      waterTank.position.set(1.6, 9.8, 1.2);
+      const tankStand = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.4, 8), twStainlessMat);
+      tankStand.position.set(1.6, 8.85, 1.2);
+      g.add(waterTank, tankStand);
+
+      g.position.set(x, getTuchengHeight(x, z), z);
+      g.rotation.y = rotY;
+      tuchengTownGroup.add(g);
+      return g;
+    }
+
+    createTaiwaneseApartment(-28, 18);
+    createTaiwaneseApartment(-20, 18);
+    createTaiwaneseApartment(-12, 18);
+    createTaiwaneseApartment(-4, 18);
+
+    createTaiwaneseApartment(-28, 30);
+    createTaiwaneseApartment(-20, 30);
+    createTaiwaneseApartment(-12, 30);
+    createTaiwaneseApartment(-4, 30);
+
+    // Taiwanese Local Temple (福德宮)
+    const templeGroup = new THREE.Group();
+    const templeRedMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4 });
+    const templeGoldMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, metalness: 0.6 });
+
+    const tBase = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.5, 4.2), templeRedMat);
+    tBase.position.y = 0.25;
+    const tHall = new THREE.Mesh(new THREE.BoxGeometry(4.0, 2.6, 3.4), templeRedMat);
+    tHall.position.y = 1.6;
+    templeGroup.add(tBase, tHall);
+
+    const tRoof = new THREE.Mesh(new THREE.ConeGeometry(3.6, 1.6, 4), templeGoldMat);
+    tRoof.rotation.y = Math.PI / 4;
+    tRoof.position.y = 3.6;
+    tRoof.scale.set(1.3, 0.8, 1.1);
+    templeGroup.add(tRoof);
+
+    const incenseBurner = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.45, 0.9, 12), new THREE.MeshStandardMaterial({ color: 0xb45309, metalness: 0.8 }));
+    incenseBurner.position.set(0, 0.45, 2.8);
+    templeGroup.add(incenseBurner);
+
+    templeGroup.position.set(6, getTuchengHeight(6, 22), 22);
+    tuchengTownGroup.add(templeGroup);
+
+    tuchengWorldGroup.add(tuchengTownGroup);
+
+    // 14.5 Taiwanese Yellow Taxis (台灣大車隊/小黃計程車)
+    const tuchengCars = [];
+    const taxiYellowMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.25, metalness: 0.4 });
+    const taxiSignMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    function createYellowTaxi() {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.65, 3.2), taxiYellowMat);
+      body.position.y = 0.52;
+      body.castShadow = true;
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.55, 1.8), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.1 }));
+      cabin.position.set(0, 1.05, -0.15);
+      g.add(body, cabin);
+
+      const taxiSign = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.22, 0.35), taxiSignMat);
+      taxiSign.position.set(0, 1.45, -0.15);
+      g.add(taxiSign);
+
+      [[-0.82, -0.85], [0.82, -0.85], [-0.82, 0.85], [0.82, 0.85]].forEach(([wx, wz]) => {
+        const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.22, 12), wheelMat);
+        wh.rotation.z = Math.PI / 2;
+        wh.position.set(wx, 0.28, wz);
+        g.add(wh);
+      });
+
+      [-0.55, 0.55].forEach(hx => {
+        const hl = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.08), headlightMat);
+        hl.position.set(hx, 0.55, -1.62);
+        g.add(hl);
+      });
+      [-0.55, 0.55].forEach(hx => {
+        const tl = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.08), taillightMat);
+        tl.position.set(hx, 0.55, 1.62);
+        g.add(tl);
+      });
+
+      tuchengWorldGroup.add(g);
+      return g;
+    }
+
+    for (let i = 0; i < 3; i++) {
+      const taxi = createYellowTaxi();
+      tuchengCars.push({
+        mesh: taxi,
+        progress: i * 0.33,
+        speed: 0.04
+      });
+    }
+    window.tuchengCars = tuchengCars;
+
+    // 14.6 Tianshangshan Summit & White May Tung Blossoms
+    const tungBlossomMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0xfce7f3,
+      emissiveIntensity: 0.2,
+      roughness: 0.65
+    });
+    const mountainTrunkMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
+
+    const tungPositions = [
+      [22, 18], [26, 24], [30, 20], [35, 28], [28, 36],
+      [42, 34], [48, 38], [52, 45], [44, 48], [38, 52],
+      [32, 58], [28, 64], [56, 26], [62, 32], [50, 22]
+    ];
+    tungPositions.forEach(([tx, tz]) => {
+      const ty = getTuchengHeight(tx, tz);
+      const tree = new THREE.Group();
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 2.8, 8), mountainTrunkMat);
+      trunk.position.y = 1.4;
+      trunk.castShadow = true;
+      tree.add(trunk);
+
+      const canopy = new THREE.Mesh(new THREE.DodecahedronGeometry(1.8, 1), tungBlossomMat);
+      canopy.position.y = 3.2;
+      canopy.scale.set(1.2, 0.85, 1.2);
+      canopy.castShadow = true;
+      tree.add(canopy);
+
+      tree.position.set(tx, ty, tz);
+      tuchengMountainGroup.add(tree);
+    });
+
+    const peakDeck = new THREE.Group();
+    const peakWood = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.45, 6.5), deckWoodMat);
+    peakWood.position.y = 0.22;
+    peakDeck.add(peakWood);
+
+    const trigPillar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 0.95, 0.4),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.8 })
+    );
+    trigPillar.position.set(0, 0.8, 0);
+    peakDeck.add(trigPillar);
+
+    const trailSign = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.2, 0.65), shrineWoodMat);
+    trailSign.position.set(2.4, 1.2, -2.2);
+    peakDeck.add(trailSign);
+
+    peakDeck.position.set(46, getTuchengHeight(46, 42), 42);
+    tuchengMountainGroup.add(peakDeck);
+
+    tuchengWorldGroup.add(tuchengMountainGroup);
 
     /* =======================================================================
        7. Architectural Buildings, Memorial Monuments & High-Detail RO Characters
@@ -4311,25 +4834,104 @@
     };
 
     
-    // Fast-Travel Scenic Teleport for Fukuoka World Exploration
+    // Dual-World Map Switcher Engine (Fukuoka Muromi <-> New Taipei Tucheng)
+    window.switchWorldMap = function(mapId) {
+      ensureAudioCtx();
+      window.currentMapId = mapId;
+      const btnF = document.getElementById('btn-map-fukuoka');
+      const btnT = document.getElementById('btn-map-tucheng');
+      const titleEl = document.getElementById('world-brand-title');
+      const syncEl = document.getElementById('sync-status');
+      const scenicGroup = document.getElementById('scenic-waypoints-group');
+
+      if (mapId === 'fukuoka') {
+        fukuokaWorldGroup.visible = true;
+        tuchengWorldGroup.visible = false;
+        if (btnF) btnF.classList.add('active');
+        if (btnT) btnT.classList.remove('active');
+        if (titleEl) titleEl.innerText = '雙城山河城鎮 ‧ 日本福岡・室見川海濱 ＆ 地下鐵';
+        if (syncEl) syncEl.innerText = 'v1.5.0 ‧ 福岡室見川＆地下鐵 ‧ 早良稻田水車 ‧ 愛宕神社 ‧ 油山展望台';
+        if (scenicGroup) {
+          scenicGroup.innerHTML = `
+            <span id="scenic-nav-title" style="font-size:11px; color:#7dd3fc; font-weight:700; padding:0 5px; display:flex; align-items:center;">📍 福岡名勝:</span>
+            <button class="pill-btn" onclick="teleportToScenic('coast')" title="前往博多灣海岸與室見川出海口">🌊 室見海濱</button>
+            <button class="pill-btn" onclick="teleportToScenic('atago')" title="前往愛宕山頂・愛宕神社鳥居">⛩️ 愛宕神社</button>
+            <button class="pill-btn" onclick="teleportToScenic('satoyama')" title="前往早良區深處梯田・水車小屋">🌾 早良稻田</button>
+            <button class="pill-btn" onclick="teleportToScenic('muromi_subway')" title="前往地下鐵空港線室見站與地下電車隧道">🚇 室見地下鐵</button>
+            <button class="pill-btn" onclick="teleportToScenic('aburayama')" title="登上油山山頂展望台・俯瞰福岡市區與機場">⛰️ 油山展望</button>
+          `;
+        }
+        const spawnY = getFukuokaHeight(0, 5.2);
+        player.position.set(0, spawnY, 5.2);
+        targetPos.set(0, spawnY, 5.2);
+        targetRing.position.set(0, spawnY + 0.11, 5.2);
+        if (companionDog) companionDog.group.position.set(-1.8, spawnY, 5.8);
+        showGamepadBanner('🌸 已切換至：日本福岡・室見川海濱 ＆ 地下鐵');
+        window.triggerHaptics([80, 50, 140], 0.65, 0.85, 260, '🌸 已切換至：福岡・室見川海濱');
+      } else if (mapId === 'tucheng') {
+        fukuokaWorldGroup.visible = false;
+        tuchengWorldGroup.visible = true;
+        if (btnF) btnF.classList.remove('active');
+        if (btnT) btnT.classList.add('active');
+        if (titleEl) titleEl.innerText = '雙城山河城鎮 ‧ 台灣新北・土城大漢溪 ＆ 天上山桐花';
+        if (syncEl) syncEl.innerText = 'v1.5.0 ‧ 土城大漢溪高灘地公園 ‧ 擺接堡路防汛大堤 ‧ 步梯公寓騎樓 ‧ 天上山五月雪油桐花';
+        if (scenicGroup) {
+          scenicGroup.innerHTML = `
+            <span id="scenic-nav-title" style="font-size:11px; color:#34d399; font-weight:700; padding:0 5px; display:flex; align-items:center;">📍 土城名勝:</span>
+            <button class="pill-btn" onclick="teleportToScenic('dahan_river')" title="前往大漢溪河岸與濕地蘆葦沙洲">🌊 大漢溪岸</button>
+            <button class="pill-btn" onclick="teleportToScenic('floodplain_park')" title="前往高灘地河濱公園與自行車道">🌳 高灘公園</button>
+            <button class="pill-btn" onclick="teleportToScenic('tucheng_town')" title="前往土城步梯公寓、鐵窗花與土地公廟">🏢 土城街町</button>
+            <button class="pill-btn" onclick="teleportToScenic('tung_trail')" title="前往天上山五月雪油桐花步道">🌸 桐花步道</button>
+            <button class="pill-btn" onclick="teleportToScenic('tianshang_peak')" title="登上天上山頂觀景台俯瞰大漢溪">⛰️ 天上山頂</button>
+          `;
+        }
+        const spawnY = getTuchengHeight(-12, 14);
+        player.position.set(-12, spawnY, 14);
+        targetPos.set(-12, spawnY, 14);
+        targetRing.position.set(-12, spawnY + 0.11, 14);
+        if (companionDog) companionDog.group.position.set(-13.8, spawnY, 14.8);
+        showGamepadBanner('桐 已切換至：台灣新北・土城大漢溪 ＆ 天上山桐花');
+        window.triggerHaptics([80, 50, 140], 0.65, 0.85, 260, '桐 已切換至：新北・土城大漢溪');
+      }
+    };
+
+    // Fast-Travel Scenic Teleport for Dual-World Exploration
     window.teleportToScenic = function(spot) {
       ensureAudioCtx();
       isMoving = false;
       let tx = 0, ty = 0, tz = 0, name = '';
+      // Fukuoka Spots
       if (spot === 'coast') {
         tx = -4; tz = -36; name = '🌊 博多灣海濱 ＆ 室見川出海口';
       } else if (spot === 'atago') {
         tx = -26; tz = -25; name = '⛩️ 愛宕山頂 ‧ 愛宕神社鳥居';
       } else if (spot === 'satoyama') {
         tx = -14; tz = 25; name = '🌾 早良區深處里山 ‧ 梯田水車小屋';
+      } else if (spot === 'muromi_subway') {
+        tx = 14; tz = -2.5; name = '🚇 地下鐵空港線室見站 ＆ 地下電車穿越隧道';
       } else if (spot === 'aburayama') {
         tx = 38; tz = 32; name = '⛰️ 油山山頂展望台 ‧ 俯瞰福岡市區與機場';
+      }
+      // Tucheng Spots
+      else if (spot === 'dahan_river') {
+        tx = -15; tz = -38; name = '🌊 大漢溪河岸 ＆ 濕地蘆葦沙洲';
+      } else if (spot === 'floodplain_park') {
+        tx = -8; tz = -14; name = '🌳 大漢溪高灘地河濱公園 ＆ 自行車道';
+      } else if (spot === 'tucheng_town') {
+        tx = -14; tz = 20; name = '🏢 土城步梯公寓 ‧ 鐵窗花 ‧ 不鏽鋼水塔 ‧ 土地公廟';
+      } else if (spot === 'tung_trail') {
+        tx = 28; tz = 32; name = '🌸 天上山五月雪油桐花步道';
+      } else if (spot === 'tianshang_peak') {
+        tx = 46; tz = 42; name = '⛰️ 天上山最高峰三角點木造觀景台';
       }
       ty = window.getTerrainHeight ? window.getTerrainHeight(tx, tz) : 0;
       player.position.set(tx, ty, tz);
       targetPos.set(tx, ty, tz);
       targetRing.position.set(tx, ty + 0.11, tz);
-      showGamepadBanner(`🌸 已抵達：${name}`);
+      if (companionDog) {
+        companionDog.group.position.set(tx - 1.5, ty, tz + 1.2);
+      }
+      showGamepadBanner(`📍 已抵達：${name}`);
       window.triggerHaptics([80, 50, 120], 0.65, 0.85, 250, name);
     };
 
@@ -4341,13 +4943,46 @@
       // Update GLSL Water, Puddle, Komorebi & Volumetric God-Ray Shaders
       waterUniforms.uTime.value = t;
 
-      // Fukuoka Dynamic Landmarks: Rotating Watermill Wheel
-      if (window.watermillWheel) {
-        window.watermillWheel.rotation.z += dt * 1.6;
+      // Fukuoka Dynamic Landmarks: Rotating Watermill Wheel, Road Cars & Subway
+      if (fukuokaWorldGroup.visible) {
+        if (window.watermillWheel) {
+          window.watermillWheel.rotation.z += dt * 1.6;
+        }
+
+        // Animated Cars looping across Muromi Bridge (Z: 0) and along riverbank avenues
+        if (window.fukuokaCars) {
+          window.fukuokaCars.forEach(c => {
+            c.progress = (c.progress + dt * c.speed) % 1.0;
+            let carX = -22 + c.progress * 46.0;
+            let carZ = Math.sin(c.progress * Math.PI * 2) * 1.4;
+            let carY = getFukuokaHeight(carX, carZ);
+            c.mesh.position.set(carX, carY, carZ);
+            c.mesh.rotation.y = Math.PI / 2;
+          });
+        }
+
+        // Fukuoka City Subway Train periodically rushing through tunnel under river
+        if (window.fukuokaSubwayTrain) {
+          const subwayCycle = (t % 14.0) / 14.0;
+          const trainX = -32.0 + subwayCycle * 64.0;
+          window.fukuokaSubwayTrain.position.x = trainX;
+        }
+      }
+
+      // Tucheng Dynamic Vehicles: Yellow Taxis Looping along Baijiepu Road Dike
+      if (tuchengWorldGroup.visible) {
+        if (window.tuchengCars) {
+          window.tuchengCars.forEach(tc => {
+            tc.progress = (tc.progress + dt * tc.speed) % 1.0;
+            const taxiX = -65.0 + tc.progress * 130.0;
+            tc.mesh.position.set(taxiX, 3.68, 4.0);
+            tc.mesh.rotation.y = Math.PI / 2;
+          });
+        }
       }
 
       // Fukuoka Airport (FUK) Aircraft Takeoff / Landing Loop
-      if (window.airplaneGroup) {
+      if (window.airplaneGroup && fukuokaWorldGroup.visible) {
         const period = 20.0;
         const cycle = (t % period) / period;
         const ap = window.airplaneGroup;
@@ -4490,7 +5125,7 @@
           targetRing.position.set(nextX, 0.11, nextZ);
         }
         let groundY = window.getTerrainHeight ? window.getTerrainHeight(player.position.x, player.position.z) : 0;
-        if (Math.abs(player.position.z) < 1.85 && Math.abs(player.position.x - bridgeCenterX) < 4.2) {
+        if (window.currentMapId !== "tucheng" && Math.abs(player.position.z) < 1.85 && Math.abs(player.position.x - bridgeCenterX) < 5.4) {
           const bt = (player.position.x - bridgeCenterX) / 8.4;
           groundY = Math.max(groundY, 0.85 + Math.cos(bt * Math.PI) * 1.05);
         }
@@ -4512,7 +5147,7 @@
           player.position.z += (dz / dist) * speed * dt;
 
           let groundY = window.getTerrainHeight ? window.getTerrainHeight(player.position.x, player.position.z) : 0;
-          if (Math.abs(player.position.z) < 1.85 && Math.abs(player.position.x - bridgeCenterX) < 4.2) {
+          if (window.currentMapId !== "tucheng" && Math.abs(player.position.z) < 1.85 && Math.abs(player.position.x - bridgeCenterX) < 5.4) {
             const bt = (player.position.x - bridgeCenterX) / 8.4;
             groundY = Math.max(groundY, 0.85 + Math.cos(bt * Math.PI) * 1.05);
           }

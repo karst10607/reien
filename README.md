@@ -3,7 +3,7 @@
 > 一個重現《仙境傳說 RO》與《動物森友會》溫暖治癒風格的 2.5D 偽 3D 線上靈園、虛擬追思園與自建庭園小鎮。  
 > 具備免安裝瀏覽器秒開、點擊走動、聖壇獻花點燈、親友追思信箱、以及完整的**自由建造庭園小鎮系統**。
 
-[![Release](https://img.shields.io/badge/Release-v1.4.0-6366f1?style=for-the-badge&logo=github)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/Release-v1.5.0-6366f1?style=for-the-badge&logo=github)](CHANGELOG.md)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-13%20Tests%20Passing-emerald?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/ci-deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-%E7%8F%BE%E5%9C%A8%E5%85%8D%E5%AE%89%E8%A3%9D%E5%85%A5%E5%9C%92%E5%8F%83%E8%A8%AA-10b981?style=for-the-badge&logo=googlechrome&logoColor=white)](https://karst10607.github.io/reien/)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Online-blue?style=for-the-badge)](https://karst10607.github.io/reien/)
@@ -16,7 +16,15 @@
 
 ## 📸 實機畫面 (Live Screenshots)
 
-### 1. 靈園與小鎮全景 (World Overview)
+### 1. 雙城世界巡禮 (Dual-World System)
+* **福岡室見川地下鐵與街町 (Fukuoka Muromi Transit)**：
+![福岡地下鐵室見站與河底電車](docs/screenshots/fukuoka_muromi_subway_and_cars.png)
+* **新北土城大漢溪與防汛大堤 (Tucheng Dahan River & Flood Dike)**：
+![新北土城大漢溪高灘地公園與防汛大堤](docs/screenshots/tucheng_dahan_river_and_dike.png)
+* **土城步梯公寓與天上山五月雪油桐花 (Tucheng Shophouses & Tung Blossoms)**：
+![土城步梯公寓與天上山桐花](docs/screenshots/tucheng_apartments_and_tung_blossoms.png)
+
+### 2. 靈園與小鎮全景 (World Overview)
 ![靈園主世界全景](docs/screenshots/memorial_ui_full.png)
 * **RO 經典 45° 斜俯視角 (Isometric)**：低多邊形（Low-poly）溫馨造景、石板路徑、中央守護聖壇、靜心蓮池與千本櫻花樹。
 * **動態粒子氛圍**：空中飄拂的粉白落櫻花瓣粒子與螢火蟲。
