@@ -377,10 +377,10 @@
       <div class="brand-card">
         <span class="brand-icon">🕊️</span>
         <div>
-          <div class="brand-title">星塵彼岸 ‧ 雲端小鎮與紀念庭園 <span class="version-badge">v1.3.1</span></div>
+          <div class="brand-title">福岡山河城鎮 ‧ 室見川海岸 ＆ 早良稻田 ＆ 油山展望台 <span class="version-badge">v1.4.0</span></div>
           <div class="brand-subtitle">
             <span class="online-indicator"></span>
-            <span id="sync-status">v1.3.1 ‧ Next-Gen PBR 凹凸法線貼圖 ‧ GLSL 景深折射水體 ‧ 滾輪縮放視角</span>
+            <span id="sync-status">v1.4.0 ‧ 福岡西區＆早良區 ‧ 愛宕神社 ‧ 早良里山稻田水車 ‧ 油山俯瞰福岡機場</span>
           </div>
         </div>
         <button id="btn-top-hud-toggle" class="hud-toggle-btn" onclick="toggleTopHUD()" title="手遊沉浸模式 (收合/展開頂部面板)">
@@ -402,6 +402,16 @@
             <button class="pill-btn" onclick="setWeather('rain')">🌧️ 濛濛細雨</button>
             <button class="pill-btn" onclick="setWeather('snow')">❄️ 漫天飄雪</button>
             <button class="pill-btn" onclick="setWeather('thunder')">⚡ 驚雷驟雨</button>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="pill-group" id="fukuoka-scenic-group" style="border: 1px solid rgba(56, 189, 248, 0.35);">
+            <span style="font-size:11px; color:#7dd3fc; font-weight:700; padding:0 5px; display:flex; align-items:center;">📍 福岡名勝巡禮:</span>
+            <button class="pill-btn" onclick="teleportToScenic('coast')" title="前往博多灣海岸與室見川出海口">🌊 室見川海濱</button>
+            <button class="pill-btn" onclick="teleportToScenic('atago')" title="前往愛宕山頂・愛宕神社鳥居">⛩️ 愛宕神社</button>
+            <button class="pill-btn" onclick="teleportToScenic('satoyama')" title="前往早良區深處梯田・水車小屋">🌾 早良稻田</button>
+            <button class="pill-btn" onclick="teleportToScenic('aburayama')" title="登上油山山頂展望台・俯瞰福岡市區與機場起降">⛰️ 油山展望台</button>
           </div>
         </div>
 
@@ -1095,43 +1105,126 @@
     const windowMeshes = [];
 
     /* =======================================================================
-       4. Uneven 3D Terrain, Sculpted Cobblestones & Recessed Wet Puddles
+       4. Fukuoka Geographic Topography (Muromi River, Atago Hill, Sawara Rice Terraces, Mt. Aburayama)
        ======================================================================= */
-    // 4.1 3D Uneven Rolling Grass Terrain (with vertex displacement & multi-zone chromatic vertex colors)
-    const groundGeo = new THREE.PlaneGeometry(120, 120, 96, 96);
+    function getRiverCenterX(z) {
+      // S-curve river: from Mt. Aburayama valleys (Z ~ 48, X ~ 5) north through Sawara (Z ~ 0, X ~ 3), past Atago hill (Z ~ -24, X ~ -4) to Hakata Bay (Z ~ -42, X ~ -6)
+      return 3.0 + Math.sin(z * 0.08) * 4.5 + Math.cos(z * 0.04) * 2.2 - (z < -18 ? (z + 18) * 0.18 : 0);
+    }
+
+    function getRiverHalfWidth(z) {
+      if (z < -36) {
+        // Estuary mouth widens into Hakata Bay
+        return 4.2 + Math.min(16.0, (-36 - z) * 1.35);
+      }
+      const bayFactor = Math.exp(-Math.pow((z - 0.0) / 7.2, 2));
+      return 2.8 + bayFactor * 1.6;
+    }
+
+    function isPointInRiver(x, z, extraMargin = 0) {
+      if (z < -42 || z > 52) return false;
+      const cx = getRiverCenterX(z);
+      const hw = getRiverHalfWidth(z) + extraMargin;
+      return Math.abs(x - cx) < hw;
+    }
+
+    const bridgeCenterX = getRiverCenterX(0);
+
+    function getTerrainHeight(x, z) {
+      // 1. Hakata Bay open waters (Z < -42)
+      if (z < -42) return 0.0;
+
+      // Coastal slope (Z between -42 and -36)
+      let h = 0.0;
+      if (z < -36) {
+        h = Math.max(0.0, (z + 42) * 0.18);
+      } else {
+        h = 0.85; // Base plain elevation
+      }
+
+      // 2. Mt. Atago (愛宕山 - West bank of Muromi river mouth, X ~ -26, Z ~ -26)
+      const atagoDist = Math.hypot(x - (-26), z - (-26));
+      if (atagoDist < 18.0) {
+        const normDist = atagoDist / 18.0;
+        const hill = Math.cos(normDist * Math.PI * 0.5);
+        // Smooth hill dome up to +9.6m, with flattened summit for Atago Shrine
+        h += Math.pow(hill, 1.6) * 9.6;
+      }
+
+      // 3. Mt. Aburayama (油山 - Southeast mountain range, X ~ 38, Z ~ 32)
+      const aburaDist = Math.hypot(x - 38, z - 32);
+      if (aburaDist < 36.0) {
+        const normDist = aburaDist / 36.0;
+        const mtn = Math.cos(normDist * Math.PI * 0.5);
+        // Dramatic mountain summit up to +24.5m with overlook deck
+        h += Math.pow(mtn, 1.45) * 24.5;
+      }
+
+      // 4. Deep Sawara Rice Terraces (早良區深處梯田 - Southwest, X in [-34, -6], Z in [12, 54])
+      if (x > -35 && x < -6 && z > 12 && z < 54) {
+        let terrace = 0.0;
+        if (z < 25) terrace = 1.35;
+        else if (z < 38) terrace = 2.95;
+        else terrace = 4.85;
+        h += terrace;
+      }
+
+      // 5. Muromi Riverbed Channel Depression
+      if (z >= -42 && z <= 52) {
+        const cx = getRiverCenterX(z);
+        const hw = getRiverHalfWidth(z);
+        const dCenter = Math.abs(x - cx);
+        if (dCenter < hw) {
+          const depression = (1.0 - Math.pow(dCenter / hw, 2)) * 1.15;
+          h -= depression;
+        }
+      }
+
+      // 6. Muromi Arched Bridge Elevation
+      if (Math.abs(z - 0.0) < 2.0 && Math.abs(x - bridgeCenterX) < 4.2) {
+        const bt = (x - bridgeCenterX) / 8.4;
+        h = Math.max(h, 0.85 + Math.cos(bt * Math.PI) * 1.05);
+      }
+
+      return Math.max(0.0, h);
+    }
+    window.getTerrainHeight = getTerrainHeight;
+    window.getRiverCenterX = getRiverCenterX;
+    window.getRiverHalfWidth = getRiverHalfWidth;
+    window.isPointInRiver = isPointInRiver;
+
+    // 4.1 3D Fukuoka Expanded Topography Mesh (180x200m)
+    const groundGeo = new THREE.PlaneGeometry(180, 200, 140, 150);
     const gPos = groundGeo.attributes.position;
     const gColors = new Float32Array(gPos.count * 3);
     for (let i = 0; i < gPos.count; i++) {
       const vx = gPos.getX(i);
       const vy = gPos.getY(i); // maps to world -Z after -PI/2 rotation
       const wz = -vy;
-      // Keep central plaza, roads, and river channel flat/carved, raise rolling hills outside
-      const distCenter = Math.hypot(vx, wz);
-      const onMainRoad = Math.abs(vx) < 4.5 || Math.abs(wz) < 4.5;
-      const onRiver = Math.abs(vx - (9.2 + Math.sin(wz * 0.13) * 3.0)) < 5.5;
-      if (!onMainRoad && !onRiver && distCenter > 11.5) {
-        const hill = Math.sin(vx * 0.14) * Math.cos(wz * 0.14) * 0.42
-                   + Math.sin(vx * 0.35 + wz * 0.25) * 0.12;
-        gPos.setZ(i, Math.max(0, hill));
-      } else if (onRiver) {
-        gPos.setZ(i, -0.35); // carved riverbed depression!
-      }
 
-      // Multi-tone chromatic vertex coloring to break up flat green uniformity:
-      // Warm golden-chartreuse on sun-facing clearings, cool teal-indigo in forest shade, warm rose-gold near Sakura sanctuary
-      const sunFacing = Math.max(-1, Math.min(1, (vx * 0.7 + wz * 0.5) / 22.0));
-      const dapple = Math.sin(vx * 0.38) * Math.cos(wz * 0.38) * 0.5 + Math.sin(vx * 0.85 - wz * 0.65) * 0.5;
-      let r = 0.88 + sunFacing * 0.20 + dapple * 0.14;
-      let g = 0.96 + sunFacing * 0.10 + dapple * 0.10;
-      let b = 0.82 - sunFacing * 0.12 + (1.0 - dapple) * 0.14;
-      if (onRiver) {
-        r *= 0.65; g *= 1.05; b *= 1.15; // cool emerald-aqua riverbank moss
-      } else if (distCenter < 15.0 && wz < 2.0) {
-        r *= 1.12; g *= 0.98; b *= 0.96; // warm sunlit sanctuary clearing
+      const th = getTerrainHeight(vx, wz);
+      gPos.setZ(i, th);
+
+      // Multi-zone chromatic vertex colors
+      let r = 0.65, g = 0.82, b = 0.52; // Default lush plain green
+      if (wz < -38) {
+        // Hakata Bay Sand Shore
+        r = 0.88; g = 0.80; b = 0.62;
+      } else if (vx > -35 && vx < -6 && wz > 12 && wz < 54) {
+        // Sawara Rice Paddies: Vibrant golden-green agricultural hue
+        r = 0.62 + Math.sin(vx * 0.4) * 0.08;
+        g = 0.85;
+        b = 0.32;
+      } else if (Math.hypot(vx - (-26), wz - (-26)) < 16.0) {
+        // Atago Hill: Deep cedar & shrine rock
+        r = 0.32; g = 0.58; b = 0.35;
+      } else if (Math.hypot(vx - 38, wz - 32) < 32.0) {
+        // Mt. Aburayama: Highland ridge rock & alpine forest
+        r = 0.30; g = 0.50; b = 0.32;
       }
-      gColors[i * 3] = Math.max(0.42, Math.min(1.28, r));
-      gColors[i * 3 + 1] = Math.max(0.52, Math.min(1.25, g));
-      gColors[i * 3 + 2] = Math.max(0.45, Math.min(1.25, b));
+      gColors[i * 3] = r;
+      gColors[i * 3 + 1] = g;
+      gColors[i * 3 + 2] = b;
     }
     groundGeo.setAttribute('color', new THREE.BufferAttribute(gColors, 3));
     groundGeo.computeVertexNormals();
@@ -1353,20 +1446,6 @@
     /* =======================================================================
        5. Godot-Inspired Custom GLSL Water Shader (True Depth, Caustics, Fresnel & Foam)
        ======================================================================= */
-    function getRiverCenterX(z) {
-      return 9.2 + Math.sin(z * 0.13) * 3.0 + Math.cos(z * 0.07) * 1.2;
-    }
-    function getRiverHalfWidth(z) {
-      const bayFactor = Math.exp(-Math.pow((z + 3.0) / 6.2, 2));
-      return 2.6 + bayFactor * 3.1;
-    }
-    function isPointInRiver(x, z, extraMargin = 0) {
-      if (z < -26 || z > 26) return false;
-      const cx = getRiverCenterX(z);
-      const hw = getRiverHalfWidth(z) + extraMargin;
-      return Math.abs(x - cx) < hw;
-    }
-
     // Build custom River & Lotus Bay geometry with UV.x = 0 (left bank) -> 0.5 (deepest center) -> 1.0 (right bank)
     function createWindingRiverGeometry(zMin, zMax, zSegments, xSegments, widthOffset = 0) {
       const geo = new THREE.BufferGeometry();
@@ -1408,7 +1487,7 @@
     }
 
     // Physical sculpted underwater riverbed (pebbles & sand visible through shallow water)
-    const riverBedGeo = createWindingRiverGeometry(-26, 26, 110, 16, -0.1);
+    const riverBedGeo = createWindingRiverGeometry(-42, 48, 140, 16, -0.1);
     const rbPos = riverBedGeo.attributes.position;
     const rbUv = riverBedGeo.attributes.uv;
     for (let i = 0; i < rbPos.count; i++) {
@@ -1541,7 +1620,25 @@
       `
     });
 
-    const riverWaterGeo = createWindingRiverGeometry(-26, 26, 150, 24, 0);
+    const riverWaterGeo = createWindingRiverGeometry(-42, 48, 160, 24, 0);
+
+    // Hakata Bay Open Coastal Waters & Beach Strip
+    const bayWaterGeo = new THREE.PlaneGeometry(180, 80, 60, 30);
+    const bayWaterMesh = new THREE.Mesh(bayWaterGeo, riverWaterMat);
+    bayWaterMesh.rotation.x = -Math.PI / 2;
+    bayWaterMesh.position.set(0, 0.04, -78);
+    scene.add(bayWaterMesh);
+
+    const beachGeo = new THREE.PlaneGeometry(180, 12, 36, 4);
+    const beachMat = new THREE.MeshStandardMaterial({
+      color: 0xe2d9be,
+      roughness: 0.95,
+      metalness: 0.02
+    });
+    const beachMesh = new THREE.Mesh(beachGeo, beachMat);
+    beachMesh.rotation.x = -Math.PI / 2;
+    beachMesh.position.set(0, 0.22, -39.0);
+    scene.add(beachMesh);
     const riverMesh = new THREE.Mesh(riverWaterGeo, riverWaterMat);
     riverMesh.position.y = 0.07;
     scene.add(riverMesh);
@@ -1665,7 +1762,7 @@
     }
 
     // Japanese Vermilion Lacquered Arched Bridge (跨越蜿蜒溪流與荷花灣的朱紅拱橋)
-    const bridgeCenterX = getRiverCenterX(0);
+    // bridgeCenterX declared in part3a
     function createArchedBridge(x, z) {
       const bg = new THREE.Group();
       const woodDeckMat = new THREE.MeshStandardMaterial({
@@ -1985,6 +2082,297 @@
       scene.add(tuft);
       grassBlades.push({ mesh: tuft, phase: i * 0.4 });
     }
+
+    // =======================================================================
+    // 7. Fukuoka Iconic Landscapes: Atago Shrine atop Mt. Atago (X: -26, Z: -26)
+    // =======================================================================
+    const atagoGroup = new THREE.Group();
+    const shrineWoodMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.65 });
+    const shrineVermilionMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.55 });
+    const shrinePlasterMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85 });
+    const shrineRoofMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.45 });
+    const shrineGoldMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.8, roughness: 0.25 });
+
+    // Shrine Main Worship Hall (拜殿)
+    const shrinePlat = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.7, 5.4), shrineWoodMat);
+    shrinePlat.position.y = 0.35;
+    atagoGroup.add(shrinePlat);
+
+    const shrineBody = new THREE.Mesh(new THREE.BoxGeometry(5.0, 2.8, 4.2), shrinePlasterMat);
+    shrineBody.position.y = 2.1;
+    atagoGroup.add(shrineBody);
+
+    // Vermilion pillars
+    [[-2.4, -2.0], [2.4, -2.0], [-2.4, 2.0], [2.4, 2.0], [0, -2.0]].forEach(([px, pz]) => {
+      const pil = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 2.9, 12), shrineVermilionMat);
+      pil.position.set(px, 2.15, pz);
+      atagoGroup.add(pil);
+    });
+
+    // Curved Traditional Hip-and-Gable Shrine Roof
+    const sRoofLower = new THREE.Mesh(new THREE.ConeGeometry(4.8, 1.6, 4), shrineRoofMat);
+    sRoofLower.rotation.y = Math.PI / 4;
+    sRoofLower.position.y = 4.3;
+    sRoofLower.scale.set(1.4, 0.8, 1.2);
+    atagoGroup.add(sRoofLower);
+
+    // Vermilion Offering Box (賽錢箱) & Golden Bell Rope
+    const offerBox = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 0.65), shrineVermilionMat);
+    offerBox.position.set(0, 1.1, -2.2);
+    const bellRope = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 8), shrineVermilionMat);
+    bellRope.position.set(0, 2.5, -2.0);
+    const bell = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), shrineGoldMat);
+    bell.position.set(0, 3.4, -2.0);
+    atagoGroup.add(offerBox, bellRope, bell);
+
+    atagoGroup.position.set(-26, 9.6, -26);
+    scene.add(atagoGroup);
+
+    // Grand Vermilion Torii Gate at entrance of Mt. Atago
+    createTorii(-26, -21, 0);
+
+    // =======================================================================
+    // 8. Deep Sawara Rice Terraces (梯田), Irrigation Canal & Rotating Watermill
+    // =======================================================================
+    const paddyWaterMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      roughness: 0.12,
+      metalness: 0.08,
+      transparent: true,
+      opacity: 0.75
+    });
+    const paddyBermMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.95 });
+    const riceCropMat = new THREE.MeshStandardMaterial({ color: 0x84cc16, roughness: 0.65 });
+    const riceGoldCropMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.65 });
+
+    // 3 Terraced Paddy Plots (X: -32 to -8, Z: 14 to 50)
+    const paddyTiers = [
+      { zMin: 14, zMax: 23, y: 1.45, w: 22, h: 8.5 },
+      { zMin: 26, zMax: 35, y: 3.05, w: 22, h: 8.5 },
+      { zMin: 38, zMax: 48, y: 4.95, w: 22, h: 9.5 }
+    ];
+
+    paddyTiers.forEach((tier, tIdx) => {
+      const pMesh = new THREE.Mesh(new THREE.PlaneGeometry(tier.w, tier.h, 1, 1), paddyWaterMat);
+      pMesh.rotation.x = -Math.PI / 2;
+      const cz = (tier.zMin + tier.zMax) / 2;
+      pMesh.position.set(-20, tier.y, cz);
+      scene.add(pMesh);
+
+      // Earthen Berm Borders (畦道)
+      const bermGeo = new THREE.BoxGeometry(tier.w + 0.6, 0.28, 0.5);
+      const bNorth = new THREE.Mesh(bermGeo, paddyBermMat);
+      bNorth.position.set(-20, tier.y + 0.14, tier.zMin);
+      const bSouth = new THREE.Mesh(bermGeo, paddyBermMat);
+      bSouth.position.set(-20, tier.y + 0.14, tier.zMax);
+      scene.add(bNorth, bSouth);
+
+      // Rice Stalk Clusters in rows
+      const cropMat = tIdx === 1 ? riceGoldCropMat : riceCropMat;
+      for (let rx = -29; rx <= -11; rx += 1.8) {
+        for (let rz = tier.zMin + 1.2; rz <= tier.zMax - 1.2; rz += 1.6) {
+          const stalk = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.65, 5), cropMat);
+          stalk.position.set(rx + (Math.random() - 0.5) * 0.3, tier.y + 0.32, rz + (Math.random() - 0.5) * 0.3);
+          scene.add(stalk);
+        }
+      }
+    });
+
+    // Straw-hat Scarecrow (案山子)
+    const scarecrow = new THREE.Group();
+    const scPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6), shrineWoodMat);
+    scPole.position.y = 0.9;
+    const scCross = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.3, 6), shrineWoodMat);
+    scCross.rotation.z = Math.PI / 2;
+    scCross.position.y = 1.35;
+    const scHead = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), shrinePlasterMat);
+    scHead.position.y = 1.7;
+    const scHat = new THREE.Mesh(new THREE.ConeGeometry(0.48, 0.22, 10), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.9 }));
+    scHat.position.y = 1.88;
+    scarecrow.add(scPole, scCross, scHead, scHat);
+    scarecrow.position.set(-18, 3.1, 30);
+    scene.add(scarecrow);
+
+    // Rustic Farmhouse & Animated Rotating Watermill (水車小屋)
+    const millGroup = new THREE.Group();
+    const millCottage = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.6, 4.2), shrineWoodMat);
+    millCottage.position.y = 1.3;
+    const millRoof = new THREE.Mesh(new THREE.ConeGeometry(3.5, 1.8, 4), new THREE.MeshStandardMaterial({ color: 0x713f12, roughness: 0.95 }));
+    millRoof.rotation.y = Math.PI / 4;
+    millRoof.position.y = 3.3;
+    millRoof.scale.set(1.15, 0.9, 1.3);
+    millGroup.add(millCottage, millRoof);
+
+    // The Rotating Waterwheel Group (attached to East wall over stream canal)
+    const wheelGroup = new THREE.Group();
+    const wheelRimMat = new THREE.MeshStandardMaterial({ color: 0x5c2b09, roughness: 0.8 });
+    const wheelRim1 = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.06, 8, 24), wheelRimMat);
+    const wheelRim2 = wheelRim1.clone();
+    wheelRim2.position.z = 0.35;
+    wheelGroup.add(wheelRim1, wheelRim2);
+
+    // 8 Spokes & Water Buckets
+    for (let sp = 0; sp < 8; sp++) {
+      const spAngle = sp * (Math.PI / 4);
+      const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.35, 0.08), wheelRimMat);
+      spoke.rotation.z = spAngle;
+      spoke.position.z = 0.175;
+      const bucket = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.08, 0.35), wheelRimMat);
+      bucket.position.set(Math.cos(spAngle) * 1.15, Math.sin(spAngle) * 1.15, 0.175);
+      wheelGroup.add(spoke, bucket);
+    }
+    wheelGroup.position.set(1.95, 1.4, 0);
+    millGroup.add(wheelGroup);
+    window.watermillWheel = wheelGroup; // Animated in gen_part4.py
+
+    millGroup.position.set(-13, 1.4, 25);
+    scene.add(millGroup);
+
+    // =======================================================================
+    // 9. Mt. Aburayama Summit Lookout (油山展望台 X: 38, Z: 32, Y: 24.5)
+    // =======================================================================
+    const aburaDeckGroup = new THREE.Group();
+    const deckWoodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.72 });
+    const deckRailMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.85 });
+
+    // Wooden Observation Platform
+    const deckFloor = new THREE.Mesh(new THREE.BoxGeometry(8.5, 0.45, 7.5), deckWoodMat);
+    deckFloor.position.y = 0.22;
+    aburaDeckGroup.add(deckFloor);
+
+    // Perimeter Railings & Posts
+    for (let rx = -4.1; rx <= 4.1; rx += 1.35) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.1, 8), deckRailMat);
+      post.position.set(rx, 0.8, -3.65);
+      aburaDeckGroup.add(post);
+    }
+    for (let rz = -3.6; rz <= 3.6; rz += 1.35) {
+      const postW = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.1, 8), deckRailMat);
+      postW.position.set(-4.15, 0.8, rz);
+      aburaDeckGroup.add(postW);
+    }
+    const topRailN = new THREE.Mesh(new THREE.BoxGeometry(8.5, 0.08, 0.12), deckRailMat);
+    topRailN.position.set(0, 1.35, -3.65);
+    const topRailW = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 7.5), deckRailMat);
+    topRailW.position.set(-4.15, 1.35, 0);
+    aburaDeckGroup.add(topRailN, topRailW);
+
+    // Observation Park Benches
+    const benchMat = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.65 });
+    const bench1 = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.45, 0.65), benchMat);
+    bench1.position.set(1.5, 0.5, 1.8);
+    aburaDeckGroup.add(bench1);
+
+    // Summit Signpost Pole
+    const signPost = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 2.2, 8), deckRailMat);
+    signPost.position.set(3.2, 1.1, -2.6);
+    const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.1, 0.65), shrineWoodMat);
+    signBoard.position.set(3.2, 1.7, -2.6);
+    aburaDeckGroup.add(signPost, signBoard);
+
+    // Coin-operated Tourist Binoculars (雙筒望遠鏡模型) aimed at Fukuoka City & Airport!
+    const binoStand = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 1.4, 12), new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7, roughness: 0.3 }));
+    binoStand.position.set(-1.8, 0.9, -3.2);
+    const binoScope = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.22, 0.55), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.6, roughness: 0.3 }));
+    binoScope.rotation.x = 0.15; // Angled slightly down looking over the city
+    binoScope.rotation.y = -0.45; // Facing northwest toward city & airport
+    binoScope.position.set(-1.8, 1.62, -3.2);
+    aburaDeckGroup.add(binoStand, binoScope);
+
+    aburaDeckGroup.position.set(38, 24.5, 32);
+    scene.add(aburaDeckGroup);
+
+    // =======================================================================
+    // 10. Fukuoka Airport (FUK) Runway & Dynamic Passenger Aircraft System
+    // =======================================================================
+    const airportGroup = new THREE.Group();
+    const runwayMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.92,
+      metalness: 0.05
+    });
+    const runwayMarkingMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+    const runwayGreenLightMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+    const runwayWhiteLightMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+    const runwayRedLightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+
+    // Main Runway (Length 38m, Width 3.6m, oriented roughly NE-SW)
+    const runwayMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 38, 1, 1), runwayMat);
+    runwayMesh.rotation.x = -Math.PI / 2;
+    runwayMesh.position.set(0, 0.06, 0);
+    airportGroup.add(runwayMesh);
+
+    // Dashed Runway Centerline Stripes
+    for (let rz = -16; rz <= 16; rz += 3.2) {
+      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 1.6), runwayMarkingMat);
+      stripe.rotation.x = -Math.PI / 2;
+      stripe.position.set(0, 0.07, rz);
+      airportGroup.add(stripe);
+    }
+
+    // Runway Approach Green Threshold Lights & Edge Lights
+    for (let edgeX of [-1.9, 1.9]) {
+      for (let rz = -18; rz <= 18; rz += 4.5) {
+        const lightMesh = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), (rz === -18 ? runwayGreenLightMat : (rz === 18 ? runwayRedLightMat : runwayWhiteLightMat)));
+        lightMesh.position.set(edgeX, 0.12, rz);
+        airportGroup.add(lightMesh);
+      }
+    }
+
+    // Airport Control Tower (X: 52, Z: -8)
+    const towerBase = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.9, 5.2, 12), shrinePlasterMat);
+    towerBase.position.set(4.5, 2.6, -6.0);
+    const towerCabin = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.8, 1.4, 12), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.2, metalness: 0.6 }));
+    towerCabin.position.set(4.5, 5.6, -6.0);
+    const towerBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+    towerBeacon.position.set(4.5, 6.5, -6.0);
+    airportGroup.add(towerBase, towerCabin, towerBeacon);
+
+    airportGroup.position.set(44, 0.95, -10);
+    scene.add(airportGroup);
+
+    // 3D Passenger Jet Airplane Model (Fukuoka Airport Flight Loop)
+    const planeGroup = new THREE.Group();
+    const planeBodyMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.35, metalness: 0.4 });
+    const planeBlueMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.35, metalness: 0.4 });
+
+    // Fuselage & Nose
+    const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.35, 4.4, 14), planeBodyMat);
+    fuselage.rotation.x = Math.PI / 2;
+    const noseCone = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.85, 14), planeBlueMat);
+    noseCone.rotation.x = -Math.PI / 2;
+    noseCone.position.z = -2.6;
+    planeGroup.add(fuselage, noseCone);
+
+    // Swept Main Wings & Engines
+    const wings = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.06, 0.95), planeBodyMat);
+    wings.position.set(0, 0, -0.2);
+    const leftEng = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.72, 10), new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7 }));
+    leftEng.rotation.x = Math.PI / 2;
+    leftEng.position.set(-1.1, -0.25, -0.1);
+    const rightEng = leftEng.clone();
+    rightEng.position.x = 1.1;
+    planeGroup.add(wings, leftEng, rightEng);
+
+    // Tail Fin & Horizontal Stabilizers
+    const tailFin = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.1, 0.75), planeBlueMat);
+    tailFin.position.set(0, 0.65, 1.8);
+    const tailWings = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.05, 0.45), planeBodyMat);
+    tailWings.position.set(0, 0.25, 2.0);
+    planeGroup.add(tailFin, tailWings);
+
+    // Wingtip Navigation & Anti-Collision Strobe Lights
+    const leftStrobe = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+    leftStrobe.position.set(-2.3, 0.02, -0.2);
+    const rightStrobe = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
+    rightStrobe.position.set(2.3, 0.02, -0.2);
+    const tailBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0xf8fafc }));
+    tailBeacon.position.set(0, 1.25, 1.95);
+    planeGroup.add(leftStrobe, rightStrobe, tailBeacon);
+
+    planeGroup.position.set(44, 1.2, -10);
+    scene.add(planeGroup);
+    window.airplaneGroup = planeGroup; // Handled in gen_part4.py flight cycle!
 
     /* =======================================================================
        7. Architectural Buildings, Memorial Monuments & High-Detail RO Characters
@@ -3922,6 +4310,29 @@
       }
     };
 
+    
+    // Fast-Travel Scenic Teleport for Fukuoka World Exploration
+    window.teleportToScenic = function(spot) {
+      ensureAudioCtx();
+      isMoving = false;
+      let tx = 0, ty = 0, tz = 0, name = '';
+      if (spot === 'coast') {
+        tx = -4; tz = -36; name = '🌊 博多灣海濱 ＆ 室見川出海口';
+      } else if (spot === 'atago') {
+        tx = -26; tz = -25; name = '⛩️ 愛宕山頂 ‧ 愛宕神社鳥居';
+      } else if (spot === 'satoyama') {
+        tx = -14; tz = 25; name = '🌾 早良區深處里山 ‧ 梯田水車小屋';
+      } else if (spot === 'aburayama') {
+        tx = 38; tz = 32; name = '⛰️ 油山山頂展望台 ‧ 俯瞰福岡市區與機場';
+      }
+      ty = window.getTerrainHeight ? window.getTerrainHeight(tx, tz) : 0;
+      player.position.set(tx, ty, tz);
+      targetPos.set(tx, ty, tz);
+      targetRing.position.set(tx, ty + 0.11, tz);
+      showGamepadBanner(`🌸 已抵達：${name}`);
+      window.triggerHaptics([80, 50, 120], 0.65, 0.85, 250, name);
+    };
+
     function animate() {
       requestAnimationFrame(animate);
       const dt = clock.getDelta();
@@ -3929,6 +4340,52 @@
 
       // Update GLSL Water, Puddle, Komorebi & Volumetric God-Ray Shaders
       waterUniforms.uTime.value = t;
+
+      // Fukuoka Dynamic Landmarks: Rotating Watermill Wheel
+      if (window.watermillWheel) {
+        window.watermillWheel.rotation.z += dt * 1.6;
+      }
+
+      // Fukuoka Airport (FUK) Aircraft Takeoff / Landing Loop
+      if (window.airplaneGroup) {
+        const period = 20.0;
+        const cycle = (t % period) / period;
+        const ap = window.airplaneGroup;
+
+        if (cycle < 0.35) {
+          // Landing glide from Hakata Bay (Z: -60 -> -10, Y: 22 -> 1.0)
+          const p1 = cycle / 0.35;
+          ap.visible = true;
+          ap.position.set(44 - (1.0 - p1) * 8.0, 1.05 + Math.pow(1.0 - p1, 1.7) * 19.0, -10 - (1.0 - p1) * 42.0);
+          ap.rotation.set(0.08 * (1.0 - p1), 0, 0);
+        } else if (cycle < 0.52) {
+          // Decelerate and roll along runway
+          const p2 = (cycle - 0.35) / 0.17;
+          ap.visible = true;
+          ap.position.set(44, 1.05, -10 + p2 * 14.0);
+          ap.rotation.set(0, 0, 0);
+        } else if (cycle < 0.62) {
+          // Pause / taxi at end of runway
+          ap.visible = true;
+          ap.position.set(44, 1.05, 4.0);
+          ap.rotation.set(0, 0, 0);
+        } else if (cycle < 0.88) {
+          // Takeoff roll & steep climb over city toward Hakata Bay!
+          const p4 = (cycle - 0.62) / 0.26;
+          ap.visible = true;
+          const climbY = 1.05 + Math.pow(p4, 1.6) * 28.0;
+          const climbZ = 4.0 - p4 * 68.0;
+          const bankX = 44 - Math.sin(p4 * Math.PI) * 14.0;
+          ap.position.set(bankX, climbY, climbZ);
+          ap.rotation.set(-0.24, 0.18, -0.22 * Math.sin(p4 * Math.PI));
+        } else {
+          // Circling through distant clouds
+          ap.visible = true;
+          const p5 = (cycle - 0.88) / 0.12;
+          ap.position.set(30 - p5 * 10.0, 28.0 - p5 * 8.0, -64.0 + p5 * 6.0);
+          ap.rotation.set(0, -0.4, 0.15);
+        }
+      }
       puddleShaderUniforms.uTime.value = t;
       godRayUniforms.uTime.value = t;
       komorebiUniforms.uTime.value = t;
@@ -4032,10 +4489,10 @@
           targetPos.copy(player.position);
           targetRing.position.set(nextX, 0.11, nextZ);
         }
-        let groundY = 0;
+        let groundY = window.getTerrainHeight ? window.getTerrainHeight(player.position.x, player.position.z) : 0;
         if (Math.abs(player.position.z) < 1.85 && Math.abs(player.position.x - bridgeCenterX) < 4.2) {
           const bt = (player.position.x - bridgeCenterX) / 8.4;
-          groundY = Math.max(0, Math.cos(bt * Math.PI) * 0.92);
+          groundY = Math.max(groundY, 0.85 + Math.cos(bt * Math.PI) * 1.05);
         }
         player.position.y = groundY;
         playerBody.rotation.y = Math.atan2(moveX, moveZ);
@@ -4054,10 +4511,10 @@
           player.position.x += (dx / dist) * speed * dt;
           player.position.z += (dz / dist) * speed * dt;
 
-          let groundY = 0;
+          let groundY = window.getTerrainHeight ? window.getTerrainHeight(player.position.x, player.position.z) : 0;
           if (Math.abs(player.position.z) < 1.85 && Math.abs(player.position.x - bridgeCenterX) < 4.2) {
             const bt = (player.position.x - bridgeCenterX) / 8.4;
-            groundY = Math.max(0, Math.cos(bt * Math.PI) * 0.92);
+            groundY = Math.max(groundY, 0.85 + Math.cos(bt * Math.PI) * 1.05);
           }
           player.position.y = groundY;
           playerBody.rotation.y = Math.atan2(dx, dz);
