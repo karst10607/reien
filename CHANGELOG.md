@@ -5,6 +5,38 @@
 
 ---
 
+## [1.5.0] - 2026-11-08
+
+### ✨ 新增功能 (Added)
+* **室內靈龕紀念廳與可切換視角 (#16)**（仿 [lightapaw.com](https://lightapaw.com/) 的溫暖燭光室內空間）：
+  * 獨立 `hallScene` **延遲建構**（首次進入才建立），維持啟動精簡；場景含木質地板、**12 座長明靈龕**（4 欄 × 3 列，前 4 座連動既有追思資料）、中央燭光祭壇（12 支燭火 + 2 支落地燭台）、三扇灑落體積光束的拱窗、3 盞吊燈與訪客留言簿講台。
+  * **4 組預設視角**：全景／靈龕牆／燭光祭壇／窗景，以阻尼式球面軌道相機平滑過渡；支援滑鼠拖曳環繞、滾輪／雙指縮放，鍵盤 <kbd>1</kbd>–<kbd>4</kbd> 快速切換、<kbd>Esc</kbd> 返回靈園。
+  * **常駐 8 項即時控制台**（右側面板）：燭光強度、環境光、窗光、視野 FOV、自動環繞、Bloom 光暈（預設關閉、選用）、重置、隨機氛圍；所有調整即時生效。
+  * **真實互動**：點擊靈龕開啟對應追思面板、點擊祭壇點亮長明心燈、點擊留言簿開啟訪客簿；靈龕銘牌以 Canvas 程序化生成（離線、零網路依賴）。
+  * 進入時自動隱藏戶外 UI 並以 `body.in-hall` 切換暖色燭光 HUD；返回時完整還原 DPR、畫質 profile 與戶外控制器。
+
+### ⚡ 效能與載入 (Performance)
+* **草叢 InstancedMesh (#16)**：草叢改以單一 `THREE.InstancedMesh`（`DynamicDrawUsage`）批次繪製，每幀僅更新實例矩陣，取代逐網格 draw call。
+* **同材質靜態網格烘焙合併 `bakeAndMerge()` (#16)**：石燈籠、日式木屋（牆體／柱／屋頂／窗）、蓮花花瓣等改為單一合併幾何，**draw call 由 643 → 413**，並保留原 X-Ray 透視與陰影行為。
+* **低畫質光源預算 `applyQualityLightBudget()` (#16)**：流暢省電模式自動關閉次表面透射與日間／燈籠點光源（點光源可見數 ≤ 4），降低每片段光照成本；切換畫質時的一次性 shader 重編譯抖動已排除於效能取樣窗外。
+
+### 🧪 測試與 CI (Testing)
+* **E2E 擴充至 17 項**：
+  * **TC-16 室內靈龕紀念廳**：真實點擊 `#btn-hall` 進入、戶外 UI 隱藏與暖色 HUD 顯示、12 座靈龕與 ≥14 可點擊目標、4 組視角相機取景互異、真實 Pointer 點擊靈龕開啟對應追思面板、即時控制與 Bloom／重置、手機 `390×844` 排版不溢出、離開後完整還原。
+  * **TC-17 效能與光源預算回歸守門**：草叢 InstancedMesh、戶外 draw call ≤ 480、低畫質點光源 ≤ 4、室內 4 盞光源且 draw call ≤ 300、Bloom 預設關閉、離開後 composer／DPR 無洩漏。
+* **Headless 斷言決定性**：TC-16 於測試中注入 `.hall-topbar, .hall-panel { transition: none }`，避免無頭 Chrome 合成器凍結 CSS 過渡（`currentTime=0`）導致不透明度斷言不穩；正式頁面仍保留平滑過渡。TC-13 軟體渲染分支改以「渲染迴圈存活」守門（>=1 幀；必要時延長取樣確認持續出幀），不再以對 SwiftShader 無意義的 FPS 數字判定。
+* GitHub Actions 與 README 測試名稱同步更新至 17 項（TC-01 ~ TC-17）。
+
+### 🔬 實測驗證
+* `REIEN_TEST_GPU=1 python3 tests/e2e_ci_suite.py` → **17/17 PASS**（27.68s，AMD Radeon Vega 8 / radeonsi）
+  * TC-13：FCP 2156ms、app TBT 0ms、平均 11.9 FPS、1% Low 8.6 FPS
+  * TC-16 紀念廳：draw call 141、光源 4、靈龕 12（3 座連動資料）、燭火 29、可點擊目標 14
+  * TC-17：戶外 draw call 413、草叢 instanced、低畫質點光源 2、室內 draw call ≤ 300
+* `python3 tests/e2e_ci_suite.py`（SwiftShader，CI 對等）→ **17/17 PASS**（79.10s，軟體光柵化 0.8 FPS 下迴圈存活守門通過）
+* 截圖：`docs/screenshots/memorial_hall_bloom.png`
+
+---
+
 ## [1.4.3] - 2026-11-08
 
 ### 🧪 測試與 CI (Testing)

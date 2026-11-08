@@ -3,8 +3,8 @@
 > 一個重現《仙境傳說 RO》與《動物森友會》溫暖治癒風格的 2.5D 偽 3D 線上靈園、虛擬追思園與自建庭園小鎮。  
 > 具備免安裝瀏覽器秒開、點擊走動、聖壇獻花點燈、親友追思信箱、以及完整的**自由建造庭園小鎮系統**。
 
-[![Release](https://img.shields.io/badge/Release-v1.4.3-6366f1?style=for-the-badge&logo=github)](CHANGELOG.md)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-15%20Tests%20Passing-emerald?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/ci-deploy.yml)
+[![Release](https://img.shields.io/badge/Release-v1.5.0-6366f1?style=for-the-badge&logo=github)](CHANGELOG.md)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-17%20Tests%20Passing-emerald?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/ci-deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-%E7%8F%BE%E5%9C%A8%E5%85%8D%E5%AE%89%E8%A3%9D%E5%85%A5%E5%9C%92%E5%8F%83%E8%A8%AA-10b981?style=for-the-badge&logo=googlechrome&logoColor=white)](https://karst10607.github.io/reien/)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Online-blue?style=for-the-badge)](https://karst10607.github.io/reien/)
 
@@ -97,6 +97,7 @@ reien/
 3. **樹下與進入室內自動 X-Ray 透視（See-Through Occlusion）**：當角色走入日式木造御守所室內或穿梭於櫻花樹／松樹樹冠下方時，遮擋物自動平滑淡化為 `14%–16%` 半透明透視，完整呈現室內榻榻米與供桌細節。
 4. **手機直立／橫放零遮擋自適應 UI ＋ 手遊虛擬搖桿**：手機直立與橫放模式自動收合操作說明至右上角 `?` 按鈕，並於左下角提供多點觸控虛擬搖桿。
 5. **跨平台震動回饋（手把 Dual-Rumble ＋ 手機 Vibration API）與守護犬「豆豆」**：支援雷雨閃電強震，以及靠近／點擊黃金獵犬「豆豆」時的撒嬌跳躍、汪汪音效與溫柔心跳震動。
+6. **室內靈龕紀念廳 (Indoor Columbarium Memorial Hall)**：仿 lightapaw.com 的溫暖燭光室內空間，含 12 座長明靈龕牆、中央燭光祭壇、訪客留言簿與三扇灑落光束的拱窗。支援 **4 組可切換視角**（全景／靈龕牆／燭光祭壇／窗景）、拖曳環繞與滾輪縮放、靈龕點擊獻花留言，以及常駐 8 項即時氛圍／視角控制台（燭光、環境光、窗光、FOV、自動環繞、Bloom 光暈、重置、隨機氛圍）。
 
 ### 畫質分級與幀率閘門 (Render Quality Profile & Frame Gate)
 
@@ -122,7 +123,7 @@ python3 tools/bake_textures.py
 
 ## 🧪 自動化測試與 CI/CD 流水線 (Automated E2E Test Suite & GitHub Actions)
 
-本專案內建零外部套件依賴的 **Chrome DevTools Protocol (CDP) 端到端自動化測試套件**（`tests/e2e_ci_suite.py`）與 **GitHub Actions CI/CD 自動檢測發佈工作流**（`.github/workflows/ci-deploy.yml`）。每次 Push 或 PR 皆會自動執行以下 **15 項自動化測試案例（TC-01 ~ TC-15）**，全部通過後才自動部署至 GitHub Pages：
+本專案內建零外部套件依賴的 **Chrome DevTools Protocol (CDP) 端到端自動化測試套件**（`tests/e2e_ci_suite.py`）與 **GitHub Actions CI/CD 自動檢測發佈工作流**（`.github/workflows/ci-deploy.yml`）。每次 Push 或 PR 皆會自動執行以下 **17 項自動化測試案例（TC-01 ~ TC-17）**，全部通過後才自動部署至 GitHub Pages：
 
 | 測試編號 | 測試項目 | 自動化驗證內容 |
 | :--- | :--- | :--- |
@@ -141,8 +142,10 @@ python3 tools/bake_textures.py
 | **TC-13** | 渲染效能守門 (TBT / FCP / FPS / 1% Low) | 以 Navigation Timing + Long Tasks + Render Stats 驗證啟動 TBT、首屏時間、5 秒平均 FPS 與 1% Low；硬體路徑要求 app TBT < 500ms、平均 ≥ 8 FPS |
 | **TC-14** | 手把多馬達診斷模式與報告匯出 | 驗證 heavy／light／trigger 三段馬達參數與 `copyGamepadDiagReport()` 可用 |
 | **TC-15** | 錦鯉池、湖光木棧道與餵魚互動 | 驗證 `koi-lake-town` 主題、木棧道高度、≥8 種錦鯉、撒餌後魚食生成與守護犬反應 |
+| **TC-16** | 室內靈龕紀念廳與可切換視角 | 點擊 `#btn-hall` 進入，驗證 12 座靈龕、4 組視角相機取景互異、真實指標點擊靈龕開啟追思面板、即時氛圍控制／Bloom／重置、手機排版不溢出與離開後恢復戶外 UI |
+| **TC-17** | 渲染效能與光源預算回歸守門 | 驗證草叢 InstancedMesh、戶外 draw call ≤ 480、低畫質點光源預算 ≤ 4、室內紀念廳維持 4 盞光源且 draw call ≤ 300、Bloom 預設關閉、離開後 composer／DPR 無洩漏 |
 
-### 在本機執行完整 CI 測試套件 (15 項案例)：
+### 在本機執行完整 CI 測試套件 (17 項案例)：
 ```bash
 # CI 預設：SwiftShader 軟體渲染（與 GitHub Actions 一致）
 python tests/e2e_ci_suite.py
