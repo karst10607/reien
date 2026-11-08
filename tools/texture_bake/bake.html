@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>Reien Offline Texture Baker</title>
+</head>
+<body>
+  <p>Baking textures… (this page is driven by tools/bake_textures.py)</p>
+  <script src="texture_gen.js"></script>
+  <script>
+    // Each canvas is encoded as lossy WebP. Normal/roughness maps use the
+    // highest quality because they carry geometric data rather than colour.
+    const TEXTURE_SPECS = [
+      { key: 'cobblestone_albedo',    canvas: () => ReienTextureGen.createCobblestonePBR().colCanvas,  quality: 0.92 },
+      { key: 'cobblestone_normal',    canvas: () => ReienTextureGen.createCobblestonePBR().normCanvas, quality: 1.0 },
+      { key: 'cobblestone_roughness', canvas: () => ReienTextureGen.createCobblestonePBR().rghCanvas,  quality: 1.0 },
+      { key: 'grass_albedo',          canvas: () => ReienTextureGen.createGrassTerrainPBR().colCanvas,  quality: 0.92 },
+      { key: 'grass_normal',          canvas: () => ReienTextureGen.createGrassTerrainPBR().normCanvas, quality: 1.0 },
+      { key: 'bark_albedo',           canvas: () => ReienTextureGen.createBarkPBR().colCanvas,          quality: 0.92 },
+      { key: 'bark_normal',           canvas: () => ReienTextureGen.createBarkPBR().normCanvas,         quality: 1.0 },
+      { key: 'sakura_sprig',          canvas: () => ReienTextureGen.createDetailedSakuraSprigTexture(), quality: 0.95 },
+      { key: 'pine_branch',           canvas: () => ReienTextureGen.createPineBranchTexture(),          quality: 0.95 }
+    ];
+
+    window.__BAKE_TEXTURES__ = function () {
+      // Generate each family only once so albedo/normal/roughness stay paired.
+      const cobble = ReienTextureGen.createCobblestonePBR();
+      const grass = ReienTextureGen.createGrassTerrainPBR();
+      const bark = ReienTextureGen.createBarkPBR();
+      const sakura = ReienTextureGen.createDetailedSakuraSprigTexture();
+      const pine = ReienTextureGen.createPineBranchTexture();
+
+      const sources = {
+        cobblestone_albedo: cobble.colCanvas,
+        cobblestone_normal: cobble.normCanvas,
+        cobblestone_roughness: cobble.rghCanvas,
+        grass_albedo: grass.colCanvas,
+        grass_normal: grass.normCanvas,
+        bark_albedo: bark.colCanvas,
+        bark_normal: bark.normCanvas,
+        sakura_sprig: sakura,
+        pine_branch: pine
+      };
+
+      const out = {};
+      TEXTURE_SPECS.forEach(spec => {
+        const canvas = sources[spec.key];
+        const dataUrl = canvas.toDataURL('image/webp', spec.quality);
+        if (!dataUrl.startsWith('data:image/webp')) {
+          throw new Error('Browser does not support WebP encoding for ' + spec.key);
+        }
+        out[spec.key] = {
+          dataUrl,
+          width: canvas.width,
+          height: canvas.height,
+          quality: spec.quality
+        };
+      });
+      return out;
+    };
+  </script>
+</body>
+</html>

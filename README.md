@@ -75,7 +75,11 @@ http://localhost:8088
 ```
 reien/
 ├── index.html               # Three.js 2.5D 前端客戶端 (支援 GitHub Pages 秒開)
+├── assets/textures/         # 離線預烘焙 WebP PBR 材質（啟動時非同步載入）
 ├── server.py                # 本機測試伺服器腳本
+├── tools/
+│   ├── bake_textures.py     # Canvas2D → WebP 離線紋理烘焙工具
+│   └── texture_bake/        # 烘焙頁與程序化紋理來源
 ├── docs/
 │   ├── architecture_and_evaluation.md   # 完整技術選型、Godot/Rust 對比與 Oracle VPS 評估
 │   └── screenshots/                     # 實機展示截圖
@@ -93,6 +97,15 @@ reien/
 3. **樹下與進入室內自動 X-Ray 透視（See-Through Occlusion）**：當角色走入日式木造御守所室內或穿梭於櫻花樹／松樹樹冠下方時，遮擋物自動平滑淡化為 `14%–16%` 半透明透視，完整呈現室內榻榻米與供桌細節。
 4. **手機直立／橫放零遮擋自適應 UI ＋ 手遊虛擬搖桿**：手機直立與橫放模式自動收合操作說明至右上角 `?` 按鈕，並於左下角提供多點觸控虛擬搖桿。
 5. **跨平台震動回饋（手把 Dual-Rumble ＋ 手機 Vibration API）與守護犬「豆豆」**：支援雷雨閃電強震，以及靠近／點擊黃金獵犬「豆豆」時的撒嬌跳躍、汪汪音效與溫柔心跳震動。
+
+### 紋理離線烘焙管線 (Offline Texture Baking)
+
+啟動時不再於主執行緒逐像素計算法線貼圖或繪製 42 朵貝茲櫻花。所有程序化 PBR 材質已預先烘焙為 `assets/textures/*.webp`，`index.html` 僅透過 `THREE.TextureLoader` 非同步載入：
+
+```bash
+# 修改 tools/texture_bake/texture_gen.js 後重新產生 WebP
+python3 tools/bake_textures.py
+```
 
 ---
 
