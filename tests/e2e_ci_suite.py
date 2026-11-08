@@ -244,7 +244,8 @@ def run_tc01_static_syntax():
 
     required_ids = [
         'canvas-container', 'joystick-zone', 'joystick-knob',
-        'normal-help', 'haptic-toast', 'memorial-modal', 'minimap-canvas'
+        'normal-help', 'haptic-toast', 'memorial-modal', 'minimap-canvas',
+        'btn-quality'
     ]
     for dom_id in required_ids:
         assert_true(f'id="{dom_id}"' in html, f'Missing required DOM element id="{dom_id}"')
@@ -342,6 +343,8 @@ def run_browser_suite(screenshot_dir: str = None):
         assert_true(diag is not None, f"window.__REIEN_DIAG__ failed to initialize: {diag}")
         assert_true(diag['occludablesCount'] >= 15, f"Expected >= 15 occludable trees/houses, got {diag['occludablesCount']}")
         assert_true(diag['monumentsCount'] >= 3, f"Expected >= 3 monuments, got {diag['monumentsCount']}")
+        assert_true(diag.get('qualityMode') == 'performance', f"Expected qualityMode 'performance', got {diag.get('qualityMode')}")
+        assert_true(diag.get('hasComposer') is False, f"Expected composer disabled in performance mode")
         print("PASS")
 
         # -----------------------------------------------------------------
@@ -516,9 +519,9 @@ def run_browser_suite(screenshot_dir: str = None):
         print("PASS")
 
         # -----------------------------------------------------------------
-        # TC-08: Multi-Layered Daytime Lighting, 4096 Shadow Map & Komorebi
+        # TC-08: Multi-Layered Daytime Lighting, Dynamic Quality & Komorebi
         # -----------------------------------------------------------------
-        print("[TC-08] Multi-Layered Daytime Lighting, Shadows & Komorebi...", end=" ", flush=True)
+        print("[TC-08] Multi-Layered Daytime Lighting, Dynamic Quality & Komorebi...", end=" ", flush=True)
         light_res = eval_js(ws, """
             window.setWeather('clear');
             window.setTimeOfDay('day');
@@ -527,16 +530,35 @@ def run_browser_suite(screenshot_dir: str = None):
             targetZoom = 0.74; cameraZoom = 0.74;
             targetYaw = 0.88; cameraYaw = 0.88;
             window.petGoldenDog();
-            return window.__REIEN_DIAG__.getState().lights;
+            const perfShadow = window.__REIEN_DIAG__.getState().lights.shadowMapSize;
+            window.toggleRenderQuality(); // Switch to 'quality' (4096, bloom)
+            const qualityState = window.__REIEN_DIAG__.getState();
+            window.toggleRenderQuality(); // Switch back to 'performance' (2048)
+            const backPerfState = window.__REIEN_DIAG__.getState();
+            return {
+                lights: qualityState.lights,
+                perfShadow,
+                qualityShadow: qualityState.lights.shadowMapSize,
+                qualityMode: qualityState.qualityMode,
+                qualityHasComposer: qualityState.hasComposer,
+                backPerfMode: backPerfState.qualityMode,
+                backPerfShadow: backPerfState.lights.shadowMapSize,
+                backPerfHasComposer: backPerfState.hasComposer
+            };
         """)
-        assert_true(light_res['shadowMapSize'] == 4096, f"Expected 4096 shadow map, got {light_res['shadowMapSize']}")
-        contrast_ratio = light_res['mainInt'] / max(0.01, light_res['hemiInt'])
+        assert_true(light_res['perfShadow'] == 2048, f"Expected 2048 shadow map in performance mode, got {light_res['perfShadow']}")
+        assert_true(light_res['qualityShadow'] == 4096, f"Expected 4096 shadow map in quality mode, got {light_res['qualityShadow']}")
+        assert_true(light_res['qualityMode'] == 'quality', f"Expected qualityMode 'quality', got {light_res['qualityMode']}")
+        assert_true(light_res['backPerfMode'] == 'performance', f"Expected return to 'performance', got {light_res['backPerfMode']}")
+        assert_true(light_res['backPerfShadow'] == 2048, f"Expected return to 2048 shadow map, got {light_res['backPerfShadow']}")
+        assert_true(light_res['backPerfHasComposer'] is False, "Composer should be disabled in performance mode")
+        contrast_ratio = light_res['lights']['mainInt'] / max(0.01, light_res['lights']['hemiInt'])
         assert_true(contrast_ratio >= 7.5, f"Daytime directional-to-ambient contrast too flat: {contrast_ratio:.2f}")
-        assert_true(light_res['rimInt'] >= 0.75, f"Expected strong cool rim light >= 0.75 in daytime, got {light_res['rimInt']}")
-        assert_true(light_res['subInt'] >= 0.50, f"Expected subsurface backlight >= 0.50 in daytime, got {light_res['subInt']}")
-        assert_true(light_res['accentCount'] >= 4, f"Expected >= 4 spatial bounce lights, got {light_res['accentCount']}")
-        assert_true(light_res['godRayInt'] >= 0.45, f"Expected daytime godRayInt >= 0.45, got {light_res['godRayInt']}")
-        assert_true(light_res['komorebiStrength'] >= 1.0, f"Expected komorebiStrength >= 1.0, got {light_res['komorebiStrength']}")
+        assert_true(light_res['lights']['rimInt'] >= 0.75, f"Expected strong cool rim light >= 0.75 in daytime, got {light_res['lights']['rimInt']}")
+        assert_true(light_res['lights']['subInt'] >= 0.50, f"Expected subsurface backlight >= 0.50 in daytime, got {light_res['lights']['subInt']}")
+        assert_true(light_res['lights']['accentCount'] >= 4, f"Expected >= 4 spatial bounce lights, got {light_res['lights']['accentCount']}")
+        assert_true(light_res['lights']['godRayInt'] >= 0.45, f"Expected daytime godRayInt >= 0.45, got {light_res['lights']['godRayInt']}")
+        assert_true(light_res['lights']['komorebiStrength'] >= 1.0, f"Expected komorebiStrength >= 1.0, got {light_res['lights']['komorebiStrength']}")
 
         if screenshot_dir:
             time.sleep(1.2)
