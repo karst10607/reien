@@ -5,6 +5,17 @@
 
 ---
 
+## [1.4.1] - 2026-11-08
+
+### ⚡ 效能與載入 (Performance)
+* **離線預烘焙 PBR 紋理 (#8)**：
+  * 新增 `tools/bake_textures.py` 與 `tools/texture_bake/`，將石板、草地、樹皮（albedo／normal／roughness）與櫻花枝、松針枝程序化 Canvas 紋理離線烘焙為 9 張 WebP（共約 265 KiB）。
+  * `index.html` 移除啟動時 `heightToNormalCanvas()` 逐像素 `Math.hypot` 法線運算與 42 朵五瓣櫻花即時繪製，改以 `THREE.TextureLoader` 非同步載入；石板路／廣場仍以載入後 clone 保留各自重複貼圖比例。
+  * 新增 `window.__REIEN_BAKED_TEXTURES__` 載入狀態供 E2E 驗證。
+* **驗證**：完整 14 項 E2E 全數 PASS，9/9 張 WebP 成功解碼並掛載至 321 個材質。
+
+---
+
 ## [1.3.1] - 2026-10-25
 
 ### 🚀 強化與改進 (Enhanced)
