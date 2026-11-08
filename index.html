@@ -3114,24 +3114,77 @@
     /* =======================================================================
        9. Weather Systems (Rain Ripples, Ground Splashes, Snow, Thunder, Petals)
        ======================================================================= */
-    // 9.1 Falling Sakura Petals
+    // Shared uniform for GPU Weather Particles
+    const weatherUniforms = {
+      uTime: { value: 0.0 },
+      uPlayerPos: { value: new THREE.Vector3() }
+    };
+
+    // 9.1 Falling Sakura Petals (GPU Vertex Shader Driven)
     const petalCount = 220;
     const petalGeo = new THREE.BufferGeometry();
     const petalPositions = new Float32Array(petalCount * 3);
-    const petalVelocities = [];
+    const petalVelocities = new Float32Array(petalCount * 3);
+    const petalPhases = new Float32Array(petalCount);
     for (let i = 0; i < petalCount; i++) {
       petalPositions[i * 3] = (Math.random() - 0.5) * 44;
-      petalPositions[i * 3 + 1] = Math.random() * 14 + 1;
+      petalPositions[i * 3 + 1] = Math.random() * 14 + 0.1;
       petalPositions[i * 3 + 2] = (Math.random() - 0.5) * 44;
-      petalVelocities.push({
-        vx: (Math.random() - 0.5) * 0.02,
-        vy: -(Math.random() * 0.02 + 0.015),
-        vz: (Math.random() - 0.5) * 0.02,
-        phase: Math.random() * Math.PI * 2
-      });
+      petalVelocities[i * 3] = (Math.random() - 0.5) * 0.4;
+      petalVelocities[i * 3 + 1] = 1.6 + Math.random() * 0.8;
+      petalVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.4;
+      petalPhases[i] = Math.random() * Math.PI * 2;
     }
     petalGeo.setAttribute('position', new THREE.BufferAttribute(petalPositions, 3));
-    const petalMat = new THREE.PointsMaterial({ color: 0xffb7c5, size: 0.24, transparent: true, opacity: 0.88 });
+    petalGeo.setAttribute('aVelocity', new THREE.BufferAttribute(petalVelocities, 3));
+    petalGeo.setAttribute('aPhase', new THREE.BufferAttribute(petalPhases, 1));
+
+    const petalMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: weatherUniforms.uTime,
+        uPlayerPos: weatherUniforms.uPlayerPos,
+        uColor: { value: new THREE.Color(0xffb7c5) },
+        uOpacity: { value: 0.88 }
+      },
+      transparent: true,
+      depthWrite: false,
+      vertexShader: `
+        uniform float uTime;
+        uniform vec3 uPlayerPos;
+        attribute vec3 aVelocity;
+        attribute float aPhase;
+
+        void main() {
+          float fall = uTime * aVelocity.y;
+          float y = mod(position.y - fall - 0.1, 14.0);
+          if (y < 0.0) y += 14.0;
+          y += 0.1;
+
+          vec3 p = position;
+          p.y = y;
+          p.x += sin(uTime * 1.5 + aPhase) * 0.8 + aVelocity.x * uTime * 0.3;
+          p.z += cos(uTime * 1.2 + aPhase) * 0.8 + aVelocity.z * uTime * 0.3;
+
+          p.x = uPlayerPos.x + mod(p.x - uPlayerPos.x + 22.0, 44.0) - 22.0;
+          p.z = uPlayerPos.z + mod(p.z - uPlayerPos.z + 22.0, 44.0) - 22.0;
+
+          vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
+          gl_PointSize = clamp(260.0 / -mvPosition.z, 3.0, 16.0);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        uniform float uOpacity;
+        void main() {
+          vec2 coord = gl_PointCoord - vec2(0.5);
+          float dist = length(coord);
+          if (dist > 0.5) discard;
+          float alpha = smoothstep(0.5, 0.15, dist) * uOpacity;
+          gl_FragColor = vec4(uColor, alpha);
+        }
+      `
+    });
     const petals = new THREE.Points(petalGeo, petalMat);
     scene.add(petals);
 
@@ -3149,23 +3202,76 @@
     const fireflies = new THREE.Points(fireflyGeo, fireflyMat);
     scene.add(fireflies);
 
-    // 9.3 Slanted Rain Streaks
+    // 9.3 Slanted Rain Streaks (GPU Vertex Shader Driven)
     const rainCount = 950;
     const rainGeo = new THREE.BufferGeometry();
-    const rainPos = new Float32Array(rainCount * 6);
+    const rainBasePos = new Float32Array(rainCount * 6);
+    const rainOffsets = new Float32Array(rainCount * 2);
+    const rainSpeeds = new Float32Array(rainCount * 2);
     for (let i = 0; i < rainCount; i++) {
       const rx = (Math.random() - 0.5) * 48;
       const ry = Math.random() * 24;
       const rz = (Math.random() - 0.5) * 48;
-      rainPos[i * 6] = rx;
-      rainPos[i * 6 + 1] = ry;
-      rainPos[i * 6 + 2] = rz;
-      rainPos[i * 6 + 3] = rx - 0.16;
-      rainPos[i * 6 + 4] = ry - 0.88;
-      rainPos[i * 6 + 5] = rz;
+      const spd = 30.0 + Math.random() * 8.0;
+
+      // Head
+      rainBasePos[i * 6] = rx;
+      rainBasePos[i * 6 + 1] = ry;
+      rainBasePos[i * 6 + 2] = rz;
+      rainOffsets[i * 2] = 0.0;
+      rainSpeeds[i * 2] = spd;
+
+      // Tail
+      rainBasePos[i * 6 + 3] = rx;
+      rainBasePos[i * 6 + 4] = ry;
+      rainBasePos[i * 6 + 5] = rz;
+      rainOffsets[i * 2 + 1] = 1.0;
+      rainSpeeds[i * 2 + 1] = spd;
     }
-    rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-    const rainMat = new THREE.LineBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.58 });
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(rainBasePos, 3));
+    rainGeo.setAttribute('aOffset', new THREE.BufferAttribute(rainOffsets, 1));
+    rainGeo.setAttribute('aSpeed', new THREE.BufferAttribute(rainSpeeds, 1));
+
+    const rainMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: weatherUniforms.uTime,
+        uPlayerPos: weatherUniforms.uPlayerPos,
+        uColor: { value: new THREE.Color(0xbae6fd) }
+      },
+      transparent: true,
+      vertexShader: `
+        uniform float uTime;
+        uniform vec3 uPlayerPos;
+        attribute float aOffset;
+        attribute float aSpeed;
+
+        void main() {
+          float fall = uTime * aSpeed;
+          float y = mod(position.y - fall, 24.0);
+          if (y < 0.0) y += 24.0;
+
+          vec3 p = position;
+          p.y = y;
+          p.x += -fall * 0.13;
+
+          p.x = uPlayerPos.x + mod(p.x - uPlayerPos.x + 24.0, 48.0) - 24.0;
+          p.z = uPlayerPos.z + mod(p.z - uPlayerPos.z + 24.0, 48.0) - 24.0;
+
+          if (aOffset > 0.5) {
+            p.x -= 0.16;
+            p.y -= 0.88;
+          }
+
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        void main() {
+          gl_FragColor = vec4(uColor, 0.58);
+        }
+      `
+    });
     const rainSystem = new THREE.LineSegments(rainGeo, rainMat);
     rainSystem.visible = false;
     scene.add(rainSystem);
@@ -3214,23 +3320,64 @@
       groundSplashes.push({ mesh: sMesh, mat: sMat, progress: Math.random() });
     }
 
-    // 9.6 Snowflakes
+    // 9.6 Snowflakes (GPU Vertex Shader Driven)
     const snowCount = 700;
     const snowGeo = new THREE.BufferGeometry();
     const snowPos = new Float32Array(snowCount * 3);
+    const snowPhases = new Float32Array(snowCount);
+    const snowSpeeds = new Float32Array(snowCount);
     for (let i = 0; i < snowCount; i++) {
       snowPos[i * 3] = (Math.random() - 0.5) * 48;
       snowPos[i * 3 + 1] = Math.random() * 22;
       snowPos[i * 3 + 2] = (Math.random() - 0.5) * 48;
+      snowPhases[i] = Math.random() * Math.PI * 2;
+      snowSpeeds[i] = 2.4 + Math.random() * 1.6;
     }
     snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
-    const snowMat = new THREE.PointsMaterial({
-      map: snowflakeTex,
-      color: 0xffffff,
-      size: 0.42,
+    snowGeo.setAttribute('aPhase', new THREE.BufferAttribute(snowPhases, 1));
+    snowGeo.setAttribute('aSpeed', new THREE.BufferAttribute(snowSpeeds, 1));
+
+    const snowMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: weatherUniforms.uTime,
+        uPlayerPos: weatherUniforms.uPlayerPos,
+        uTexture: { value: snowflakeTex }
+      },
       transparent: true,
-      opacity: 0.92,
-      depthWrite: false
+      depthWrite: false,
+      vertexShader: `
+        uniform float uTime;
+        uniform vec3 uPlayerPos;
+        attribute float aPhase;
+        attribute float aSpeed;
+
+        void main() {
+          float fall = uTime * aSpeed;
+          float y = mod(position.y - fall - 0.1, 22.0);
+          if (y < 0.0) y += 22.0;
+          y += 0.1;
+
+          vec3 p = position;
+          p.y = y;
+          p.x += sin(uTime * 1.5 + aPhase) * 0.9;
+          p.z += cos(uTime * 1.2 + aPhase) * 0.9;
+
+          p.x = uPlayerPos.x + mod(p.x - uPlayerPos.x + 24.0, 48.0) - 24.0;
+          p.z = uPlayerPos.z + mod(p.z - uPlayerPos.z + 24.0, 48.0) - 24.0;
+
+          vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
+          gl_PointSize = clamp(360.0 / -mvPosition.z, 3.0, 20.0);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D uTexture;
+        void main() {
+          vec4 texCol = texture2D(uTexture, gl_PointCoord);
+          if (texCol.a < 0.05) discard;
+          gl_FragColor = vec4(1.0, 1.0, 1.0, texCol.a * 0.92);
+        }
+      `
     });
     const snowSystem = new THREE.Points(snowGeo, snowMat);
     snowSystem.visible = false;
@@ -4815,44 +4962,11 @@
       // RO-Style See-Through Occlusion Transparency
       updateOcclusion(dt, false);
 
-      // Weather Particle Updates
-      if (petals.visible) {
-        const pos = petalGeo.attributes.position.array;
-        for (let i = 0; i < petalCount; i++) {
-          const v = petalVelocities[i];
-          pos[i * 3] += v.vx + Math.sin(t + v.phase) * 0.008;
-          pos[i * 3 + 1] += v.vy;
-          pos[i * 3 + 2] += v.vz + Math.cos(t + v.phase) * 0.008;
-          if (pos[i * 3 + 1] < 0.1) {
-            pos[i * 3 + 1] = 14;
-            pos[i * 3] = player.position.x + (Math.random() - 0.5) * 38;
-            pos[i * 3 + 2] = player.position.z + (Math.random() - 0.5) * 38;
-          }
-        }
-        petalGeo.attributes.position.needsUpdate = true;
-      }
+      // Weather Particle Updates (GPU Shader Driven - Zero CPU Buffer Upload)
+      weatherUniforms.uTime.value = t;
+      weatherUniforms.uPlayerPos.value.copy(player.position);
 
       if (rainSystem.visible) {
-        const rArr = rainGeo.attributes.position.array;
-        for (let i = 0; i < rainCount; i++) {
-          rArr[i * 6 + 1] -= 0.68;
-          rArr[i * 6 + 4] -= 0.68;
-          rArr[i * 6] -= 0.09;
-          rArr[i * 6 + 3] -= 0.09;
-          if (rArr[i * 6 + 1] < 0) {
-            const rx = player.position.x + (Math.random() - 0.5) * 44;
-            const ry = 20 + Math.random() * 6;
-            const rz = player.position.z + (Math.random() - 0.5) * 44;
-            rArr[i * 6] = rx;
-            rArr[i * 6 + 1] = ry;
-            rArr[i * 6 + 2] = rz;
-            rArr[i * 6 + 3] = rx - 0.16;
-            rArr[i * 6 + 4] = ry - 0.88;
-            rArr[i * 6 + 5] = rz;
-          }
-        }
-        rainGeo.attributes.position.needsUpdate = true;
-
         waterRipples.forEach(r => {
           r.progress += dt * 1.65;
           if (r.progress >= 1.0) {
@@ -4882,20 +4996,6 @@
           s.mesh.position.y = 0.08 + jump * 0.18;
           s.mat.opacity = (1.0 - s.progress) * 0.75;
         });
-      }
-
-      if (snowSystem.visible) {
-        const sArr = snowGeo.attributes.position.array;
-        for (let i = 0; i < snowCount; i++) {
-          sArr[i * 3 + 1] -= 0.065;
-          sArr[i * 3] += Math.sin(t * 1.5 + i) * 0.015;
-          if (sArr[i * 3 + 1] < 0.1) {
-            sArr[i * 3 + 1] = 20;
-            sArr[i * 3] = player.position.x + (Math.random() - 0.5) * 44;
-            sArr[i * 3 + 2] = player.position.z + (Math.random() - 0.5) * 44;
-          }
-        }
-        snowGeo.attributes.position.needsUpdate = true;
       }
 
       if (currentWeather === 'thunder') {
