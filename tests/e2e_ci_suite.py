@@ -1077,12 +1077,19 @@ def run_browser_suite(screenshot_dir: str = None):
                     "Outdoor composer must stay disabled in performance mode")
 
         # Hall scene keeps its own small light budget + draw-call ceiling; bloom is opt-in.
+        # Poll until at least one hall frame has rendered (SwiftShader can take
+        # >1 s/frame, so a fixed sleep may sample before the first hall render).
         eval_js(ws, "window.enterMemorialHall();", timeout=10)
-        time.sleep(1.2)
-        hallp = eval_js(ws, "return window.__REIEN_HALL__.getState();", timeout=8)
+        hallp = None
+        for _ in range(32):
+            time.sleep(0.25)
+            hallp = eval_js(ws, "return window.__REIEN_HALL__.getState();", timeout=8)
+            if hallp and hallp.get('drawCalls', 0) > 0:
+                break
+        assert_true(hallp is not None and hallp['active'], f"Hall did not activate: {hallp}")
         assert_true(hallp['lights'] == 4, f"Hall light budget must be exactly 4, got {hallp['lights']}")
         assert_true(hallp['drawCalls'] > 0 and hallp['drawCalls'] <= 300,
-                    f"Hall draw calls above the 300 ceiling: {hallp['drawCalls']}")
+                    f"Hall draw calls outside (0, 300]: {hallp['drawCalls']}")
         assert_true(hallp['hasBloom'] is False, "Bloom composer should be off by default in the hall")
 
         # Exiting restores the outdoor pipeline exactly (no leaked composer / pixel ratio).

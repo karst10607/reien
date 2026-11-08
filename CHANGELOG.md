@@ -28,11 +28,11 @@
 * GitHub Actions 與 README 測試名稱同步更新至 17 項（TC-01 ~ TC-17）。
 
 ### 🔬 實測驗證
-* `REIEN_TEST_GPU=1 python3 tests/e2e_ci_suite.py` → **17/17 PASS**（27.68s，AMD Radeon Vega 8 / radeonsi）
-  * TC-13：FCP 2156ms、app TBT 0ms、平均 11.9 FPS、1% Low 8.6 FPS
+* `REIEN_TEST_GPU=1 python3 tests/e2e_ci_suite.py` → **17/17 PASS**（25.97s，AMD Radeon Vega 8 / radeonsi）
+  * TC-13：FCP 1552ms、app TBT 52ms、平均 12.4 FPS、1% Low 7.5 FPS
   * TC-16 紀念廳：draw call 141、光源 4、靈龕 12（3 座連動資料）、燭火 29、可點擊目標 14
   * TC-17：戶外 draw call 413、草叢 instanced、低畫質點光源 2、室內 draw call ≤ 300
-* `python3 tests/e2e_ci_suite.py`（SwiftShader，CI 對等）→ **17/17 PASS**（79.10s，軟體光柵化 0.8 FPS 下迴圈存活守門通過）
+* `python3 tests/e2e_ci_suite.py`（SwiftShader，CI 對等）→ **17/17 PASS**（78.11s，軟體光柵化平均 2.3 FPS 下迴圈存活守門通過）
 * 截圖：`docs/screenshots/memorial_hall_bloom.png`
 
 ---

@@ -4888,6 +4888,7 @@
        in its own scene with a small light budget (1 hemi + 1 key + 2 points).
        ======================================================================= */
     let hallBuilt = false;
+    let hallLastDrawCalls = 0;
     let hallScene = null, hallCamera = null, hallComposer = null, hallBloomPass = null;
     let hallHemi = null, hallKeyLight = null, hallCandleLightA = null, hallCandleLightB = null;
     let hallFlameMat = null, hallNicheGlowMat = null, hallWindowMat = null;
@@ -5194,6 +5195,7 @@
       updateHallCamera(dt);
       if (hallComposer) hallComposer.render();
       else renderer.render(hallScene, hallCamera);
+      hallLastDrawCalls = renderer.info.render.calls;
     }
 
     function hallZoomBy(delta) {
@@ -5401,7 +5403,7 @@
         fov: +hallOrbit.fov.toFixed(1),
         autoOrbit: hallOrbit.autoOrbit,
         hasBloom: !!hallComposer,
-        drawCalls: hallActive ? renderer.info.render.calls : 0,
+        drawCalls: hallActive ? hallLastDrawCalls : 0,
         lights: hallScene ? hallScene.children.filter(o => o.isLight).length : 0
       })
     };
