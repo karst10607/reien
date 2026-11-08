@@ -298,17 +298,19 @@ def run_browser_suite(screenshot_dir: str = None):
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     try:
-        # Wait for CDP endpoint to come up
+        # Wait for CDP endpoint to come up (allow up to 30s for cold runner SwiftShader initialization)
         tabs = None
-        for _ in range(40):
+        for _ in range(120):
+            if proc.poll() is not None:
+                raise RuntimeError(f"Headless browser process exited prematurely with code {proc.returncode}")
             try:
                 raw = urllib.request.urlopen(f"http://127.0.0.1:{debug_port}/json", timeout=1).read()
                 tabs = json.loads(raw)
                 if tabs:
                     break
             except Exception:
-                time.sleep(0.2)
-        assert_true(bool(tabs), "Failed to connect to headless browser CDP endpoint")
+                time.sleep(0.25)
+        assert_true(bool(tabs), "Failed to connect to headless browser CDP endpoint within 30s")
 
         target_tab = next((t for t in tabs if t.get('type') == 'page'), tabs[0])
         ws = ws_connect(target_tab['webSocketDebuggerUrl'])
