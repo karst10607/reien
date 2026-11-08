@@ -98,6 +98,17 @@ reien/
 4. **手機直立／橫放零遮擋自適應 UI ＋ 手遊虛擬搖桿**：手機直立與橫放模式自動收合操作說明至右上角 `?` 按鈕，並於左下角提供多點觸控虛擬搖桿。
 5. **跨平台震動回饋（手把 Dual-Rumble ＋ 手機 Vibration API）與守護犬「豆豆」**：支援雷雨閃電強震，以及靠近／點擊黃金獵犬「豆豆」時的撒嬌跳躍、汪汪音效與溫柔心跳震動。
 
+### 畫質分級與幀率閘門 (Render Quality Profile & Frame Gate)
+
+右上角 `⚡` 按鈕可在兩種模式間即時切換，選擇會持久化於 `localStorage['reien.renderQuality']`：
+
+| 模式 | 目標幀率 | DPR 上限（手機／桌機） | 陰影 | Bloom |
+| :--- | :--- | :--- | :--- | :--- |
+| **流暢省電 (30FPS)** | 30 FPS 幀率閘門 | `0.8` / `1.0` | 關閉（`shadowMap.enabled=false`、主光 `castShadow=false`） | 停用 |
+| **極致光影 (60FPS)** | 60 FPS 幀率閘門 | `1.25` / `1.7` | 開啟（4096 shadow map） | `UnrealBloomPass` |
+
+`createRenderFrameGate()` 會跳過多餘的 render 工作但仍保留 `requestAnimationFrame`，避免行動裝置持續滿載過熱。
+
 ### 紋理離線烘焙管線 (Offline Texture Baking)
 
 啟動時不再於主執行緒逐像素計算法線貼圖或繪製 42 朵貝茲櫻花。所有程序化 PBR 材質已預先烘焙為 `assets/textures/*.webp`，`index.html` 僅透過 `THREE.TextureLoader` 非同步載入：

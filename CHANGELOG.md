@@ -5,6 +5,18 @@
 
 ---
 
+## [1.4.2] - 2026-11-08
+
+### ✨ 新增功能 (Added)
+* **畫質分級管理系統與 30/60 FPS 幀率閘門 (#9)**：
+  * `流暢省電 (30FPS)`：關閉動態陰影與 Bloom，DPR 上限手機 `0.8`／桌機 `1.0`，並以 `createRenderFrameGate()` 將 render 鎖在 30 FPS。
+  * `極致光影 (60FPS)`：4096 陰影貼圖、`UnrealBloomPass`、DPR 上限手機 `1.25`／桌機 `1.7`，幀率閘門 60 FPS。
+  * 使用者選擇持久化於 `localStorage['reien.renderQuality']`，重新整理後自動套用；視窗尺寸變化時重新計算 DPR 上限。
+  * `window.__REIEN_DIAG__` 新增 `shadowEnabled`、`mainCastShadow`、`pixelRatio`、`frameCapFps`、`qualityPersisted`、`gpuRenderer`、`softwareRenderer`，並提供 `resetRenderStats()`／`getRenderStats()`（平均 FPS、1% Low、最低 FPS）。
+* **驗證**：完整 14 項 E2E 全數 PASS；低／高畫質的 DPR、陰影、Bloom、localStorage 與幀率上限皆以 CDP 實測通過。
+
+---
+
 ## [1.4.1] - 2026-11-08
 
 ### ⚡ 效能與載入 (Performance)

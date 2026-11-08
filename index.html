@@ -378,7 +378,7 @@
       <div class="brand-card">
         <span class="brand-icon">🕊️</span>
         <div>
-          <div class="brand-title">線上靈園 ‧ 湖光彼岸紀念庭園 <span class="version-badge">v1.4.1</span></div>
+          <div class="brand-title">線上靈園 ‧ 湖光彼岸紀念庭園 <span class="version-badge">v1.4.2</span></div>
           <div class="brand-subtitle">
             <span class="online-indicator"></span>
             <span id="sync-status">線上靈園 ‧ 湖畔步道與水波錦鯉 ‧ 自由漫遊</span>
@@ -425,9 +425,9 @@
             <span>👥</span>
             <span id="sim-text">陪伴旅人 (開)</span>
           </button>
-          <button id="btn-quality" class="btn-glass active" onclick="toggleRenderQuality()" title="切換畫質與效能模式 (60 FPS)">
+          <button id="btn-quality" class="btn-glass active" onclick="toggleRenderQuality()" title="切換畫質與效能模式 (30 / 60 FPS)">
             <span id="quality-icon">⚡</span>
-            <span id="quality-text">流暢 (60FPS)</span>
+            <span id="quality-text">流暢省電 (30FPS)</span>
           </button>
           <button id="btn-vibe-test" class="btn-glass" onclick="testHapticsAndGamepad()" title="測試手機震動與藍牙/有線手把連線狀態">
             <span>📳</span>
@@ -4259,51 +4259,119 @@
       }
     }
 
-    // High-Performance Dynamic Render Quality Profile (Aligned with koi.vividcats.org architecture)
-    let currentQualityMode = 'performance'; // 'performance' (60 FPS) or 'quality' (High)
+    // =====================================================================
+    // Render Quality Profile (Low-power 30 FPS / Cinematic 60 FPS)
+    // =====================================================================
+    const QUALITY_STORAGE_KEY = 'reien.renderQuality';
+    const isMobileViewport = () => window.innerWidth <= 920;
 
-    function applyRenderQuality(mode) {
-      currentQualityMode = mode;
-      const isPerf = mode === 'performance';
+    function readStoredQualityMode() {
+      try {
+        const saved = localStorage.getItem(QUALITY_STORAGE_KEY);
+        if (saved === 'performance' || saved === 'quality') return saved;
+      } catch (e) { /* private mode / storage disabled */ }
+      return 'performance';
+    }
+
+    // Target-FPS gate: skips render work while still letting requestAnimationFrame
+    // tick, so a 30 FPS profile genuinely saves battery/heat instead of only
+    // lowering resolution.
+    function createRenderFrameGate(targetFps = 60) {
+      const clampFps = (fps) => Math.max(1, Math.min(120, Number(fps) || 60));
+      let minInterval = 1000 / clampFps(targetFps);
+      let lastRenderAt = -Infinity;
+      return {
+        shouldRender(nowMs) {
+          if (nowMs - lastRenderAt < minInterval - 1.0) return false;
+          lastRenderAt = nowMs;
+          return true;
+        },
+        setFPS(fps) { minInterval = 1000 / clampFps(fps); },
+        getFPS() { return Math.round(1000 / minInterval); },
+        reset() { lastRenderAt = -Infinity; }
+      };
+    }
+
+    function getQualityPixelRatio(mode = currentQualityMode) {
+      const dpr = window.devicePixelRatio || 1;
+      if (mode === 'performance') return Math.min(dpr, isMobileViewport() ? 0.8 : 1.0);
+      return Math.min(dpr, isMobileViewport() ? 1.25 : 1.7);
+    }
+
+    let currentQualityMode = readStoredQualityMode();
+    const renderFrameGate = createRenderFrameGate(currentQualityMode === 'performance' ? 30 : 60);
+
+    // Detect software rasterizers (CI/SwiftShader) so diagnostics and the E2E
+    // suite can distinguish GPU shader-compile cost from application work.
+    const glContext = renderer.getContext();
+    const gpuDebugInfo = glContext.getExtension('WEBGL_debug_renderer_info');
+    const gpuRendererName = gpuDebugInfo
+      ? glContext.getParameter(gpuDebugInfo.UNMASKED_RENDERER_WEBGL)
+      : glContext.getParameter(glContext.RENDERER);
+    const isSoftwareRenderer = /swiftshader|llvmpipe|software/i.test(gpuRendererName || '');
+
+    function applyRenderQuality(mode, options = {}) {
+      const persist = options.persist !== false;
+      currentQualityMode = mode === 'quality' ? 'quality' : 'performance';
+      const isPerf = currentQualityMode === 'performance';
       const btn = document.getElementById('btn-quality');
       const text = document.getElementById('quality-text');
       const icon = document.getElementById('quality-icon');
 
-      const maxPR = (window.innerWidth <= 920 || isPerf) ? 1.25 : 1.75;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPR));
+      renderer.setPixelRatio(getQualityPixelRatio(currentQualityMode));
 
       if (isPerf) {
         if (btn) btn.classList.add('active');
-        if (text) text.innerText = '流暢 (60FPS)';
+        if (text) text.innerText = '流暢省電 (30FPS)';
         if (icon) icon.innerText = '⚡';
-        composer = null;
+        if (composer) {
+          if (typeof composer.dispose === 'function') composer.dispose();
+          composer = null;
+          bloomPass = null;
+        }
         mainLight.shadow.mapSize.width = 2048;
         mainLight.shadow.mapSize.height = 2048;
       } else {
         if (btn) btn.classList.remove('active');
-        if (text) text.innerText = '極致畫質';
+        if (text) text.innerText = '極致光影 (60FPS)';
         if (icon) icon.innerText = '✨';
-        if (typeof THREE.EffectComposer !== 'undefined' && typeof THREE.UnrealBloomPass !== 'undefined') {
+        if (!composer && typeof THREE.EffectComposer !== 'undefined' && typeof THREE.UnrealBloomPass !== 'undefined') {
           try {
             composer = new THREE.EffectComposer(renderer);
             composer.addPass(new THREE.RenderPass(scene, camera));
-            composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.14, 0.35, 0.92));
-          } catch(e) { composer = null; }
+            bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.14, 0.35, 0.92);
+            composer.addPass(bloomPass);
+          } catch(e) { composer = null; bloomPass = null; }
         }
         mainLight.shadow.mapSize.width = 4096;
         mainLight.shadow.mapSize.height = 4096;
       }
+
+      // Low-power mode removes the shadow pass entirely; high mode restores it.
+      renderer.shadowMap.enabled = !isPerf;
+      mainLight.castShadow = !isPerf;
       if (mainLight.shadow.map) {
         mainLight.shadow.map.dispose();
         mainLight.shadow.map = null;
       }
-      renderer.shadowMap.needsUpdate = true;
+      renderer.shadowMap.needsUpdate = !isPerf;
+
+      renderFrameGate.setFPS(isPerf ? 30 : 60);
+      renderFrameGate.reset();
+
+      if (persist) {
+        try { localStorage.setItem(QUALITY_STORAGE_KEY, currentQualityMode); } catch (e) { /* ignore */ }
+      }
     }
 
     window.toggleRenderQuality = function() {
       applyRenderQuality(currentQualityMode === 'performance' ? 'quality' : 'performance');
-      window.triggerHaptics([40, 25, 40], 0.45, 0.6, 120, `切換為【${currentQualityMode === 'performance' ? '流暢 60FPS' : '極致畫質'}】模式`);
+      const label = currentQualityMode === 'performance' ? '流暢省電 30FPS' : '極致光影 60FPS';
+      window.triggerHaptics([40, 25, 40], 0.45, 0.6, 120, `切換為【${label}】模式`);
     };
+
+    // Restore the persisted profile on first load without re-writing storage.
+    applyRenderQuality(currentQualityMode, { persist: false });
 
     const clock = new THREE.Clock();
     const flashEl = document.getElementById('lightning-overlay');
@@ -4318,6 +4386,14 @@
         themeTitle: '線上靈園 · 湖光彼岸',
         qualityMode: currentQualityMode,
         hasComposer: !!composer,
+        shadowEnabled: renderer.shadowMap.enabled,
+        mainCastShadow: mainLight.castShadow,
+        pixelRatio: renderer.getPixelRatio(),
+        frameCapFps: renderFrameGate.getFPS(),
+        qualityPersisted: (() => { try { return localStorage.getItem(QUALITY_STORAGE_KEY); } catch (e) { return null; } })(),
+        isMobileViewport: isMobileViewport(),
+        gpuRenderer: gpuRendererName,
+        softwareRenderer: isSoftwareRenderer,
         dockPresent: true,
         dockPos: { x: (dockStartX + dockEndX) * 0.5, z: dockCenterZ },
         koiFishCount: koiList.length,
@@ -4349,6 +4425,8 @@
         connectedGamepads: (typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean).map(g => ({ id: g.id, hasVibration: !!(g.vibrationActuator && g.vibrationActuator.playEffect) })) : [])
       }),
       setQuality: (mode) => applyRenderQuality(mode),
+      resetRenderStats: resetRenderPerfStats,
+      getRenderStats: getRenderPerfStats,
       teleportPlayer: (x, z, snap = false) => {
         isMoving = false;
         const groundY = isPointOnDock(x, z) ? 0.14 : 0;
@@ -4413,8 +4491,53 @@
       });
     }
 
-    function animate() {
+    // Rolling render-rate metrics used by the 30/60 FPS gate and the E2E
+    // performance gate (render frames intentionally exclude skipped rAF ticks).
+    const renderPerfStats = { frameCount: 0, firstAt: 0, lastAt: 0, intervals: [] };
+    function resetRenderPerfStats() {
+      renderPerfStats.frameCount = 0;
+      renderPerfStats.firstAt = 0;
+      renderPerfStats.lastAt = 0;
+      renderPerfStats.intervals.length = 0;
+    }
+    function recordRenderFrame(nowMs) {
+      if (renderPerfStats.lastAt) {
+        const interval = nowMs - renderPerfStats.lastAt;
+        if (interval > 0 && interval < 2000) {
+          renderPerfStats.intervals.push(interval);
+          if (renderPerfStats.intervals.length > 600) renderPerfStats.intervals.shift();
+        }
+      } else {
+        renderPerfStats.firstAt = nowMs;
+      }
+      renderPerfStats.lastAt = nowMs;
+      renderPerfStats.frameCount++;
+    }
+    function getRenderPerfStats() {
+      const intervals = renderPerfStats.intervals;
+      if (!intervals.length) {
+        return { frames: renderPerfStats.frameCount, avgFps: 0, low1Fps: 0, minFps: 0, maxFrameMs: 0, windowMs: 0 };
+      }
+      const sum = intervals.reduce((a, b) => a + b, 0);
+      const sorted = intervals.slice().sort((a, b) => a - b);
+      const p99Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.99));
+      const p99 = sorted[p99Index] || sorted[sorted.length - 1];
+      const worst = sorted[sorted.length - 1];
+      return {
+        frames: renderPerfStats.frameCount,
+        avgFps: 1000 / (sum / intervals.length),
+        low1Fps: 1000 / p99,
+        minFps: 1000 / worst,
+        maxFrameMs: worst,
+        windowMs: sum
+      };
+    }
+
+    function animate(nowMs) {
       requestAnimationFrame(animate);
+      const frameNow = typeof nowMs === 'number' ? nowMs : performance.now();
+      if (!renderFrameGate.shouldRender(frameNow)) return;
+      recordRenderFrame(frameNow);
       const dt = clock.getDelta();
       const t = clock.getElapsedTime();
 
@@ -4802,6 +4925,7 @@
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
+      renderer.setPixelRatio(getQualityPixelRatio(currentQualityMode));
       renderer.setSize(window.innerWidth, window.innerHeight);
       if (composer) composer.setSize(window.innerWidth, window.innerHeight);
     });
