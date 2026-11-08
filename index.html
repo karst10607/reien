@@ -427,6 +427,144 @@
       #joystick-zone { width: 92px; height: 92px; bottom: 16px; left: 12px; }
       #joystick-knob { width: 38px; height: 38px; }
     }
+
+    /* =====================================================================
+       Indoor Columbarium Memorial Hall — warm candlelit dark UI
+       ===================================================================== */
+    .btn-hall-entry {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(180, 83, 9, 0.28) 100%);
+      border: 1px solid #f59e0b; color: #92400e;
+    }
+    .btn-hall-entry:hover { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #fff; box-shadow: 0 0 16px rgba(245, 158, 11, 0.5); }
+
+    .hall-topbar {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%) translateY(-16px);
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
+      max-width: 96vw; pointer-events: none; opacity: 0; z-index: 60;
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .hall-title-card {
+      display: flex; align-items: center; gap: 11px;
+      background: rgba(26, 18, 11, 0.88); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(201, 154, 63, 0.5); border-radius: 18px; padding: 9px 16px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 233, 196, 0.08);
+    }
+    .hall-title-icon {
+      font-size: 22px; padding: 6px 9px; border-radius: 12px;
+      background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
+      box-shadow: 0 0 18px rgba(245, 158, 11, 0.55);
+    }
+    .hall-title { font-size: 15px; font-weight: 800; color: #ffe9c4; letter-spacing: 1px; }
+    .hall-subtitle { font-size: 11px; color: #b59b76; margin-top: 2px; }
+    .hall-view-group {
+      display: flex; gap: 6px; background: rgba(26, 18, 11, 0.88); backdrop-filter: blur(18px);
+      border: 1px solid rgba(201, 154, 63, 0.4); border-radius: 16px; padding: 6px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+    .hall-view-btn {
+      display: flex; align-items: center; gap: 6px; cursor: pointer;
+      background: rgba(58, 42, 26, 0.6); border: 1px solid rgba(201, 154, 63, 0.25);
+      border-radius: 11px; padding: 7px 12px; color: #d8c3a0; font-size: 12.5px; font-weight: 700;
+      transition: all 0.2s ease; white-space: nowrap;
+    }
+    .hall-view-btn .hv-icon { font-size: 15px; }
+    .hall-view-btn kbd {
+      background: rgba(0, 0, 0, 0.4); color: #b59b76; border: 1px solid rgba(201, 154, 63, 0.3);
+      border-radius: 5px; padding: 0 5px; font-size: 10px; font-weight: 700;
+    }
+    .hall-view-btn:hover { background: rgba(90, 64, 38, 0.8); border-color: #f59e0b; color: #ffe9c4; transform: translateY(-1px); }
+    .hall-view-btn.active {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-color: #fbbf24; color: #fff;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.55);
+    }
+    .hall-view-btn.active kbd { background: rgba(0, 0, 0, 0.25); color: #fff; border-color: rgba(255, 255, 255, 0.4); }
+    .hall-exit-btn {
+      display: flex; align-items: center; gap: 7px; cursor: pointer;
+      background: rgba(20, 40, 28, 0.9); backdrop-filter: blur(14px);
+      border: 1px solid rgba(52, 211, 153, 0.5); border-radius: 14px; padding: 9px 15px;
+      color: #a7f3d0; font-size: 13px; font-weight: 700; transition: all 0.2s ease;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+    }
+    .hall-exit-btn kbd { background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(52, 211, 153, 0.4); color: #6ee7b7; border-radius: 5px; padding: 0 5px; font-size: 10px; }
+    .hall-exit-btn:hover { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; border-color: #34d399; box-shadow: 0 0 16px rgba(16, 185, 129, 0.5); }
+
+    .hall-panel {
+      position: absolute; top: 96px; right: 18px; width: 264px; max-height: calc(100vh - 130px);
+      display: flex; flex-direction: column; pointer-events: none; opacity: 0; z-index: 60;
+      transform: translateX(20px);
+      background: rgba(26, 18, 11, 0.9); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(201, 154, 63, 0.45); border-radius: 20px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 233, 196, 0.07);
+      transition: opacity 0.4s ease 0.1s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s;
+    }
+    .hall-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px 10px; font-size: 13px; font-weight: 800; color: #ffe9c4; letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(201, 154, 63, 0.3);
+    }
+    .hall-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 10px #f59e0b; animation: pulse-dot 2s infinite; }
+    .hall-panel-body { padding: 12px 16px 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    /* Palette-matched custom scrollbar */
+    .hall-panel-body::-webkit-scrollbar { width: 8px; }
+    .hall-panel-body::-webkit-scrollbar-track { background: rgba(58, 42, 26, 0.5); border-radius: 8px; }
+    .hall-panel-body::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #d97706, #b45309); border-radius: 8px; border: 1px solid rgba(255, 233, 196, 0.2); }
+    .hall-panel-body::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
+    .hall-panel-body { scrollbar-width: thin; scrollbar-color: #d97706 rgba(58, 42, 26, 0.5); }
+    .hall-ctrl { display: flex; flex-direction: column; gap: 6px; }
+    .hall-ctrl label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: #d8c3a0; }
+    .hall-ctrl-val { color: #fbbf24; font-variant-numeric: tabular-nums; font-size: 11.5px; background: rgba(0, 0, 0, 0.3); padding: 1px 7px; border-radius: 6px; border: 1px solid rgba(201, 154, 63, 0.3); }
+    .hall-ctrl input[type="range"] {
+      -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 6px;
+      background: linear-gradient(90deg, #7c5c3a, #d97706); outline: none; cursor: pointer;
+    }
+    .hall-ctrl input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none; width: 17px; height: 17px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #ffe9c4, #f59e0b 60%, #b45309);
+      border: 2px solid #fff7ea; box-shadow: 0 0 10px rgba(245, 158, 11, 0.7); cursor: pointer;
+    }
+    .hall-ctrl input[type="range"]::-moz-range-thumb {
+      width: 15px; height: 15px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #ffe9c4, #f59e0b 60%, #b45309);
+      border: 2px solid #fff7ea; box-shadow: 0 0 10px rgba(245, 158, 11, 0.7); cursor: pointer;
+    }
+    .hall-toggle-row, .hall-action-row { display: flex; gap: 8px; }
+    .hall-toggle-btn, .hall-action-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+      background: rgba(58, 42, 26, 0.6); border: 1px solid rgba(201, 154, 63, 0.3); border-radius: 11px;
+      padding: 8px 6px; color: #d8c3a0; font-size: 12px; font-weight: 700; transition: all 0.2s ease;
+    }
+    .hall-toggle-btn:hover, .hall-action-btn:hover { background: rgba(90, 64, 38, 0.85); border-color: #f59e0b; color: #ffe9c4; transform: translateY(-1px); }
+    .hall-toggle-btn.active { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-color: #fbbf24; color: #fff; box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); }
+    .hall-hint { font-size: 11px; line-height: 1.6; color: #b59b76; border-top: 1px solid rgba(201, 154, 63, 0.25); padding-top: 10px; }
+    .hall-hint strong { color: #ffe9c4; }
+    .hall-hint kbd { background: rgba(0, 0, 0, 0.4); color: #fbbf24; border: 1px solid rgba(201, 154, 63, 0.35); border-radius: 4px; padding: 0 5px; font-size: 10px; }
+
+    /* Hall mode: hide outdoor UI, reveal hall HUD */
+    body.in-hall .top-bar, body.in-hall .minimap-container, body.in-hall #joystick-zone,
+    body.in-hall .bottom-bar, body.in-hall #build-palette, body.in-hall #prompt-toast { display: none !important; }
+    body.in-hall .hall-topbar { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+    body.in-hall .hall-panel { opacity: 1; pointer-events: auto; transform: translateX(0); }
+
+    @media (max-width: 920px), (max-height: 540px) {
+      .hall-topbar { top: 8px; gap: 6px; }
+      .hall-title-card { padding: 6px 10px; border-radius: 13px; gap: 7px; }
+      .hall-title { font-size: 12.5px; }
+      .hall-subtitle { display: none; }
+      .hall-title-icon { font-size: 16px; padding: 4px 6px; }
+      .hall-view-btn { padding: 6px 8px; font-size: 11px; }
+      .hall-view-btn kbd { display: none; }
+      .hall-exit-btn { padding: 7px 10px; font-size: 11.5px; }
+      .hall-exit-btn kbd { display: none; }
+      .hall-panel { top: auto; bottom: 12px; right: 12px; width: 232px; max-height: 52vh; }
+    }
+    @media (max-width: 600px) {
+      .hall-topbar { flex-direction: column; align-items: stretch; width: calc(100vw - 20px); }
+      .hall-view-group { overflow-x: auto; justify-content: flex-start; scrollbar-width: none; }
+      .hall-view-group::-webkit-scrollbar { display: none; }
+      .hall-view-btn { flex-shrink: 0; }
+      .hall-panel { left: 10px; right: 10px; width: auto; bottom: 10px; max-height: 44vh; }
+      .hall-panel-body { gap: 9px; }
+    }
   </style>
 </head>
 <body>
@@ -445,7 +583,7 @@
       <div class="brand-card">
         <span class="brand-icon">🕊️</span>
         <div>
-          <div class="brand-title">線上靈園 ‧ 湖光彼岸紀念庭園 <span class="version-badge">v1.4.3</span></div>
+          <div class="brand-title">線上靈園 ‧ 湖光彼岸紀念庭園 <span class="version-badge">v1.5.0</span></div>
           <div class="brand-subtitle">
             <span class="online-indicator"></span>
             <span id="sync-status">線上靈園 ‧ 湖畔步道與水波錦鯉 ‧ 自由漫遊</span>
@@ -504,6 +642,10 @@
             <span>🕹️</span>
             <span id="joy-text">搖桿</span>
           </button>
+          <button id="btn-hall" class="btn-glass btn-hall-entry" onclick="enterMemorialHall()" title="進入室內靈龕紀念廳 (點蠟燭・獻花・留言・轉換視角)">
+            <span>🕯️</span>
+            <span>靈龕紀念廳</span>
+          </button>
         </div>
       </div>
     </div>
@@ -556,6 +698,63 @@
         <button class="action-btn" onclick="triggerAction('flower')"><span class="icon">🌸</span><span>獻花</span></button>
         <button class="action-btn" onclick="triggerAction('sit')"><span class="icon">🧘</span><span id="sit-btn-text">坐下休息</span></button>
         <button class="action-btn" onclick="triggerEmote('💖')"><span class="icon">💖</span><span>思念</span></button>
+      </div>
+    </div>
+
+    <!-- ===== Indoor Columbarium Memorial Hall HUD ===== -->
+    <div class="hall-topbar">
+      <div class="hall-title-card">
+        <span class="hall-title-icon">🕯️</span>
+        <div>
+          <div class="hall-title">室內靈龕紀念廳</div>
+          <div class="hall-subtitle">點一盞長明心燈 ・ 獻花 ・ 留言 ・ 轉換視角</div>
+        </div>
+      </div>
+      <div class="hall-view-group" role="tablist" aria-label="紀念廳視角">
+        <button class="hall-view-btn active" data-view="overview" onclick="setHallView('overview')" title="全景 (按鍵 1)"><span class="hv-icon">🏛️</span><span>全景</span><kbd>1</kbd></button>
+        <button class="hall-view-btn" data-view="niches" onclick="setHallView('niches')" title="靈龕牆 (按鍵 2)"><span class="hv-icon">🗄️</span><span>靈龕牆</span><kbd>2</kbd></button>
+        <button class="hall-view-btn" data-view="altar" onclick="setHallView('altar')" title="燭光祭壇 (按鍵 3)"><span class="hv-icon">🕯️</span><span>燭光祭壇</span><kbd>3</kbd></button>
+        <button class="hall-view-btn" data-view="window" onclick="setHallView('window')" title="窗景 (按鍵 4)"><span class="hv-icon">🪟</span><span>窗景</span><kbd>4</kbd></button>
+      </div>
+      <button class="hall-exit-btn" onclick="exitMemorialHall()" title="返回戶外靈園 (Esc)">
+        <span>🌿</span><span>返回靈園</span><kbd>Esc</kbd>
+      </button>
+    </div>
+
+    <div class="hall-panel">
+      <div class="hall-panel-header">
+        <span>🎛️ 氛圍與視角控制台</span>
+        <span class="hall-live-dot" title="所有調整即時生效"></span>
+      </div>
+      <div class="hall-panel-body">
+        <div class="hall-ctrl">
+          <label for="hall-candle">🕯️ 燭光強度 <span class="hall-ctrl-val" id="hall-candle-val">1.00</span></label>
+          <input type="range" id="hall-candle" min="0" max="2" step="0.05" value="1" oninput="hallSetCandle(this.value); document.getElementById('hall-candle-val').innerText = parseFloat(this.value).toFixed(2);">
+        </div>
+        <div class="hall-ctrl">
+          <label for="hall-ambient">💡 環境光 <span class="hall-ctrl-val" id="hall-ambient-val">1.00</span></label>
+          <input type="range" id="hall-ambient" min="0" max="2" step="0.05" value="1" oninput="hallSetAmbient(this.value); document.getElementById('hall-ambient-val').innerText = parseFloat(this.value).toFixed(2);">
+        </div>
+        <div class="hall-ctrl">
+          <label for="hall-window">🪟 窗光 <span class="hall-ctrl-val" id="hall-window-val">1.00</span></label>
+          <input type="range" id="hall-window" min="0" max="2" step="0.05" value="1" oninput="hallSetWindow(this.value); document.getElementById('hall-window-val').innerText = parseFloat(this.value).toFixed(2);">
+        </div>
+        <div class="hall-ctrl">
+          <label for="hall-fov">🔭 視野 FOV <span class="hall-ctrl-val" id="hall-fov-val">50°</span></label>
+          <input type="range" id="hall-fov" min="30" max="85" step="1" value="50" oninput="hallSetFov(this.value); document.getElementById('hall-fov-val').innerText = this.value + '°';">
+        </div>
+        <div class="hall-toggle-row">
+          <button class="hall-toggle-btn" id="hall-auto-orbit" onclick="hallToggleAutoOrbit(this)" title="攝影機緩慢自動環繞"><span>🔄</span><span>自動環繞</span></button>
+          <button class="hall-toggle-btn" id="hall-glow" onclick="hallToggleGlow(this)" title="燭光與靈龕光暈 (Bloom)"><span>✨</span><span>光暈</span></button>
+        </div>
+        <div class="hall-action-row">
+          <button class="hall-action-btn" onclick="resetHallControls()" title="重置所有氛圍與視角"><span>↺</span><span>重置</span></button>
+          <button class="hall-action-btn" onclick="randomizeHallAmbience()" title="隨機一組溫馨氛圍"><span>🎲</span><span>隨機氛圍</span></button>
+        </div>
+        <div class="hall-hint">
+          🖱️ <strong>拖曳</strong>旋轉 ・ <strong>滾輪</strong>縮放 ・ <strong>點擊</strong>靈龕／祭壇／留言簿互動<br>
+          ⌨️ <kbd>1</kbd>–<kbd>4</kbd> 快速切換視角 ・ <kbd>Esc</kbd> 返回靈園
+        </div>
       </div>
     </div>
   </div>
@@ -692,8 +891,30 @@
       return merged;
     }
 
+    // Bake a set of static sibling meshes (sharing one material) into a single
+    // mesh to collapse draw calls. Each source mesh's local transform is baked
+    // into its geometry before merging; the sources are left for the caller to
+    // discard. Material-based effects (e.g. house occlusion fade) keep working
+    // because they operate on the shared material, not the individual meshes.
+    function bakeAndMerge(meshes, material, opts = {}) {
+      const geos = meshes.map(m => {
+        m.updateMatrix();
+        const g = m.geometry.clone();
+        g.applyMatrix4(m.matrix);
+        return g;
+      });
+      const merged = mergeBufferGeometries(geos);
+      geos.forEach(g => g.dispose());
+      const mesh = new THREE.Mesh(merged, material);
+      mesh.castShadow = !!opts.castShadow;
+      mesh.receiveShadow = !!opts.receiveShadow;
+      return mesh;
+    }
+
     let currentTimeOfDay = 'dusk';
     let currentWeather = 'clear';
+    // Indoor memorial hall mode flag (declared early so input handlers can guard).
+    let hallActive = false;
 
     const aspect = window.innerWidth / window.innerHeight;
     const camera = new THREE.PerspectiveCamera(36, aspect, 0.1, 1000);
@@ -706,6 +927,7 @@
     let cameraPitch = 0.72;      // vertical angle
 
     window.adjustZoom = function(delta) {
+      if (hallActive && typeof hallZoomBy === 'function') { hallZoomBy(delta); return; }
       targetZoom = Math.max(0.35, Math.min(2.1, targetZoom + delta));
       const pct = Math.round((1.0 / targetZoom) * 100);
       const lbl = document.getElementById('zoom-val-label');
@@ -1475,16 +1697,19 @@
       padGroup.add(pad);
 
       if (idx % 2 === 0) {
-        // Multi-petal 3D water lily flower (8 outer + 6 inner petals)
+        // Multi-petal 3D water lily flower (8 outer petals merged into one draw
+        // call since they share lotusFlowerMat) + glowing core.
         const flowerGroup = new THREE.Group();
+        const petalSrc = [];
         for (let p = 0; p < 8; p++) {
           const petal = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.32, 5), lotusFlowerMat);
           const a = (p / 8) * Math.PI * 2;
           petal.position.set(Math.cos(a) * 0.14, 0.08, Math.sin(a) * 0.14);
           petal.rotation.z = -Math.cos(a) * 0.65;
           petal.rotation.x = Math.sin(a) * 0.65;
-          flowerGroup.add(petal);
+          petalSrc.push(petal);
         }
+        flowerGroup.add(bakeAndMerge(petalSrc, lotusFlowerMat));
         const stamen = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), lotusCoreMat);
         stamen.position.y = 0.08;
         flowerGroup.add(stamen);
@@ -2230,7 +2455,13 @@
       side: THREE.DoubleSide,
       roughness: 0.65
     });
-    const grassBlades = [];
+    // GPU-instanced grass: a single crossed-plane geometry drawn once for every
+    // tuft (was ~150 groups × 2 planes ≈ 280+ draw calls). Wind sway is applied
+    // per instance matrix each frame, preserving the original tuft transform.
+    const grassPlaneA = new THREE.PlaneGeometry(0.68, 0.72); grassPlaneA.translate(0, 0.34, 0);
+    const grassPlaneB = new THREE.PlaneGeometry(0.68, 0.72); grassPlaneB.rotateY(Math.PI / 2); grassPlaneB.translate(0, 0.34, 0);
+    const grassTuftGeo = mergeBufferGeometries([grassPlaneA, grassPlaneB]);
+    const grassInstances = [];
     for (let i = 0; i < 160; i++) {
       const angle = (i * 137.5) * (Math.PI / 180);
       const dist = 4.6 + (i % 19) * 1.15;
@@ -2238,18 +2469,24 @@
       const gz = Math.sin(angle) * dist;
       if (Math.abs(gx) < 2.6 || Math.abs(gz) < 2.6) continue;
       if (isPointInRiver(gx, gz, 0.7)) continue;
-
-      const tuft = new THREE.Group();
-      const p1 = new THREE.Mesh(new THREE.PlaneGeometry(0.68, 0.72), grassCardMat);
-      p1.position.y = 0.34;
-      const p2 = p1.clone();
-      p2.rotation.y = Math.PI / 2;
-      tuft.add(p1, p2);
-      tuft.position.set(gx, 0.02, gz);
-      tuft.rotation.y = i * 0.7;
-      scene.add(tuft);
-      grassBlades.push({ mesh: tuft, phase: i * 0.4 });
+      grassInstances.push({ x: gx, z: gz, rotY: i * 0.7, phase: i * 0.4 });
     }
+    const grassInstanced = new THREE.InstancedMesh(grassTuftGeo, grassCardMat, Math.max(1, grassInstances.length));
+    grassInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    grassInstanced.frustumCulled = false;
+    scene.add(grassInstanced);
+    const grassDummy = new THREE.Object3D();
+    function updateGrassInstances(t) {
+      for (let i = 0; i < grassInstances.length; i++) {
+        const g = grassInstances[i];
+        grassDummy.position.set(g.x, 0.02, g.z);
+        grassDummy.rotation.set(0, g.rotY, Math.sin(t * 2.2 + g.phase) * 0.09);
+        grassDummy.updateMatrix();
+        grassInstanced.setMatrixAt(i, grassDummy.matrix);
+      }
+      grassInstanced.instanceMatrix.needsUpdate = true;
+    }
+    updateGrassInstances(0);
 
     /* =======================================================================
        7. Architectural Buildings, Memorial Monuments & High-Detail RO Characters
@@ -2338,14 +2575,19 @@
       const frontRightWall = new THREE.Mesh(new THREE.BoxGeometry(1.35, 2.35, 0.16), wallMat);
       frontRightWall.position.set(1.22, 1.68, 1.52);
       frontRightWall.castShadow = true;
-      group.add(backWall, leftWall, rightWall, frontLeftWall, frontRightWall);
+      // Merge the five wall panels (shared wallMat) into one draw call. The
+      // see-through fade animates wallMat.opacity, so it still affects all walls.
+      const wallMesh = bakeAndMerge([backWall, leftWall, rightWall, frontLeftWall, frontRightWall], wallMat, { castShadow: true, receiveShadow: true });
+      group.add(wallMesh);
 
-      // Corner & mid timber pillars
+      // Corner & mid timber pillars (shared woodMat) merged into one draw call.
+      const pillarSrc = [];
       [[-1.9, -1.6], [1.9, -1.6], [-1.9, 1.6], [1.9, 1.6], [-0.58, 1.6], [0.58, 1.6]].forEach(([px, pz]) => {
         const p = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.4, 0.18), woodMat);
         p.position.set(px, 1.68, pz);
-        group.add(p);
+        pillarSrc.push(p);
       });
+      group.add(bakeAndMerge(pillarSrc, woodMat, { castShadow: true }));
 
       // Multi-tiered Oriental / Fantasy curved eaves roof
       const lowerRoof = new THREE.Mesh(new THREE.ConeGeometry(3.45, 1.45, 4), roofMat);
@@ -2353,14 +2595,14 @@
       lowerRoof.rotation.y = Math.PI / 4;
       lowerRoof.scale.set(1.18, 1, 1.02);
       lowerRoof.castShadow = true;
-      group.add(lowerRoof);
 
       const upperRoof = new THREE.Mesh(new THREE.ConeGeometry(2.35, 1.15, 4), roofMat);
       upperRoof.position.y = 4.25;
       upperRoof.rotation.y = Math.PI / 4;
       upperRoof.scale.set(1.15, 1, 1.0);
       upperRoof.castShadow = true;
-      group.add(upperRoof);
+      // Both eaves share roofMat -> one draw call (rotation/scale baked in).
+      group.add(bakeAndMerge([lowerRoof, upperRoof], roofMat, { castShadow: true }));
 
       // Golden roof finial
       const finialMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.85, roughness: 0.2, transparent: true, opacity: 1.0 });
@@ -2374,10 +2616,9 @@
       // Glowing lattice windows
       const win1 = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.95), winMat);
       win1.position.set(-1.18, 1.72, 1.62);
-      group.add(win1);
       const win2 = win1.clone();
       win2.position.x = 1.18;
-      group.add(win2);
+      group.add(bakeAndMerge([win1, win2], winMat));
 
       const porchGlow = createGlowSprite('#fbbf24', 1.8);
       porchGlow.position.set(0, 2.35, 2.05);
@@ -2470,7 +2711,10 @@
         lanternLights.push(pt);
       }
 
-      group.add(base, pole, mid, lightBox, roof);
+      // Collapse the four trim-stone parts (base/pole/mid/roof) into one draw
+      // call; they share trimStoneMat and never move independently.
+      const stoneMesh = bakeAndMerge([base, pole, mid, roof], trimStoneMat, { castShadow: true });
+      group.add(stoneMesh, lightBox);
       group.position.set(x, 0, z);
       scene.add(group);
       return group;
@@ -3410,6 +3654,7 @@
     let rightDragMoved = false;
 
     window.addEventListener('mousedown', (e) => {
+      if (hallActive) return;
       if (e.button === 2) {
         isRightDragging = true;
         rightDragStartX = e.clientX;
@@ -3418,6 +3663,7 @@
     });
 
     window.addEventListener('mouseup', (e) => {
+      if (hallActive) return;
       if (e.button === 2) {
         isRightDragging = false;
       }
@@ -3975,6 +4221,7 @@
 
     window.addEventListener('contextmenu', e => {
       e.preventDefault();
+      if (hallActive) return;
       if (buildMode && !rightDragMoved) {
         ghostRotationY += Math.PI / 4;
         ghostGroup.rotation.y = ghostRotationY;
@@ -3982,6 +4229,7 @@
     });
 
     window.addEventListener('mousemove', (e) => {
+      if (hallActive) return;
       if (isRightDragging) {
         const dx = e.clientX - rightDragStartX;
         if (Math.abs(dx) > 4) rightDragMoved = true;
@@ -4002,6 +4250,7 @@
 
     window.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
+      if (hallActive) return;
       if (e.target.closest('.glass-panel') || e.target.closest('.modal-card') || e.target.closest('.build-palette') || e.target.closest('#joystick-zone')) return;
 
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -4071,6 +4320,18 @@
 
     window.addEventListener('keydown', (e) => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (e.code === 'Escape') {
+        if (modalBackdrop && modalBackdrop.classList.contains('open')) window.closeMemorialModal();
+        else if (hallActive) window.exitMemorialHall();
+        return;
+      }
+      if (hallActive) {
+        if (e.code === 'Digit1') window.setHallView('overview');
+        else if (e.code === 'Digit2') window.setHallView('niches');
+        else if (e.code === 'Digit3') window.setHallView('altar');
+        else if (e.code === 'Digit4') window.setHallView('window');
+        return;
+      }
       if (e.code === 'KeyF') {
         window.feedKoi();
       } else if (e.code === 'Space') {
@@ -4377,10 +4638,23 @@
       : glContext.getParameter(glContext.RENDERER);
     const isSoftwareRenderer = /swiftshader|llvmpipe|software/i.test(gpuRendererName || '');
 
+    // Low-power forward-rendering light budget: keep the key (main) + rim
+    // directional lights and the hemisphere ambient, but drop the subsurface
+    // fill, the 4 colored accent points and the 5 lantern points (12 punctual
+    // lights -> 2). Emissive lantern boxes + glow sprites keep the warm look
+    // without the per-fragment point-light cost. Quality mode restores all.
+    function applyQualityLightBudget() {
+      const full = currentQualityMode === 'quality';
+      subsurfaceLight.visible = full;
+      dayAccentLights.forEach(item => { item.light.visible = full; });
+      lanternLights.forEach(l => { l.visible = full; });
+    }
+
     function applyRenderQuality(mode, options = {}) {
       const persist = options.persist !== false;
       currentQualityMode = mode === 'quality' ? 'quality' : 'performance';
       const isPerf = currentQualityMode === 'performance';
+      applyQualityLightBudget();
       const btn = document.getElementById('btn-quality');
       const text = document.getElementById('quality-text');
       const icon = document.getElementById('quality-icon');
@@ -4461,6 +4735,12 @@
         isMobileViewport: isMobileViewport(),
         gpuRenderer: gpuRendererName,
         softwareRenderer: isSoftwareRenderer,
+        drawCalls: renderer.info.render.calls,
+        triangles: renderer.info.render.triangles,
+        shaderPrograms: renderer.info.programs ? renderer.info.programs.length : 0,
+        grassInstanceCount: grassInstances.length,
+        grassIsInstanced: grassInstanced.isInstancedMesh === true,
+        punctualLightsVisible: [mainLight, rimLight, subsurfaceLight, ...dayAccentLights.map(i => i.light), ...lanternLights].filter(l => l.visible).length,
         dockPresent: true,
         dockPos: { x: (dockStartX + dockEndX) * 0.5, z: dockCenterZ },
         koiFishCount: koiList.length,
@@ -4600,6 +4880,534 @@
       };
     }
 
+    /* =======================================================================
+       14. Indoor Columbarium Memorial Hall (室內靈龕紀念廳)
+       A quiet, warm interior inspired by lightapaw.com: a wall of illuminated
+       memorial niches, a candle altar, window light shafts and switchable
+       viewpoints. Built lazily on first entry so startup stays lean. Renders
+       in its own scene with a small light budget (1 hemi + 1 key + 2 points).
+       ======================================================================= */
+    let hallBuilt = false;
+    let hallLastDrawCalls = 0;
+    let hallScene = null, hallCamera = null, hallComposer = null, hallBloomPass = null;
+    let hallHemi = null, hallKeyLight = null, hallCandleLightA = null, hallCandleLightB = null;
+    let hallFlameMat = null, hallNicheGlowMat = null, hallWindowMat = null;
+    const hallFlames = [];
+    const hallNiches = [];
+    const hallClickTargets = [];
+    const hallWindowRays = [];
+    const hallGlowSprites = [];
+    let hallCurrentView = 'overview';
+    const hallPointer = { down: false, moved: false, x: 0, y: 0 };
+    const hallRaycaster = new THREE.Raycaster();
+    const hallMouseNDC = new THREE.Vector2();
+    let hallHovered = null;
+
+    const hallOrbit = {
+      target: new THREE.Vector3(0, 2.6, -1), desiredTarget: new THREE.Vector3(0, 2.6, -1),
+      radius: 13, desiredRadius: 13,
+      theta: 0, desiredTheta: 0,
+      phi: 1.25, desiredPhi: 1.25,
+      fov: 50, desiredFov: 50,
+      autoOrbit: false,
+      candleInt: 1.0, ambientInt: 1.0, windowInt: 1.0
+    };
+
+    const HALL_VIEWS = {
+      overview: { label: '全景', target: [0, 2.6, -1], radius: 13, theta: 0, phi: 1.25 },
+      niches:   { label: '靈龕牆', target: [0, 3.4, -10.5], radius: 7.5, theta: 0, phi: 1.32 },
+      altar:    { label: '燭光祭壇', target: [0, 1.5, -3], radius: 6, theta: 0.45, phi: 1.05 },
+      window:   { label: '窗景', target: [12, 3.2, -2], radius: 8, theta: -1.0, phi: 1.2 }
+    };
+
+    const clampNum = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+    // Warm parchment plate texture for a niche (name + dates + portrait glyph).
+    function makeNichePlateTexture(name, dates, isEmpty, accent) {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 320;
+      const ctx = c.getContext('2d');
+      const g = ctx.createLinearGradient(0, 0, 0, 320);
+      if (isEmpty) { g.addColorStop(0, '#2b2018'); g.addColorStop(1, '#1a120b'); }
+      else { g.addColorStop(0, '#fff7ea'); g.addColorStop(0.55, '#f6e7cd'); g.addColorStop(1, '#e8d3b0'); }
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 256, 320);
+      // portrait medallion
+      ctx.save();
+      ctx.beginPath(); ctx.arc(128, 110, 62, 0, Math.PI * 2); ctx.closePath();
+      const pg = ctx.createRadialGradient(128, 96, 8, 128, 110, 64);
+      if (isEmpty) { pg.addColorStop(0, '#4a3826'); pg.addColorStop(1, '#241a10'); }
+      else { pg.addColorStop(0, accent || '#fcd9a8'); pg.addColorStop(1, '#c98f4e'); }
+      ctx.fillStyle = pg; ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = isEmpty ? '#5b4630' : '#fffaf0'; ctx.stroke();
+      ctx.restore();
+      ctx.textAlign = 'center';
+      if (isEmpty) {
+        ctx.fillStyle = '#caa877'; ctx.font = '700 64px sans-serif'; ctx.fillText('＋', 128, 132);
+        ctx.fillStyle = '#e7d4b4'; ctx.font = '700 24px "Microsoft JhengHei", sans-serif';
+        ctx.fillText('預留位置', 128, 224);
+        ctx.fillStyle = '#b59b76'; ctx.font = '16px "Microsoft JhengHei", sans-serif';
+        ctx.fillText('留給即將到來的思念', 128, 258);
+      } else {
+        // simple silhouette
+        ctx.fillStyle = 'rgba(70,45,25,0.55)';
+        ctx.beginPath(); ctx.arc(128, 96, 24, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(128, 150, 40, 30, 0, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = '#4a3320'; ctx.font = '700 27px "Microsoft JhengHei", sans-serif';
+        ctx.fillText(name, 128, 224);
+        ctx.fillStyle = '#7c5c3a'; ctx.font = '17px sans-serif';
+        ctx.fillText(dates, 128, 256);
+        ctx.fillStyle = '#a9824f'; ctx.font = '15px "Microsoft JhengHei", sans-serif';
+        ctx.fillText('🕯️ 長明心燈', 128, 290);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.anisotropy = 4;
+      return tex;
+    }
+
+    function buildHall() {
+      hallScene = new THREE.Scene();
+      hallScene.background = new THREE.Color(0x160f08);
+      hallScene.fog = new THREE.FogExp2(0x160f08, 0.018);
+      hallCamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 120);
+
+      // --- Shared materials (reused across the hall to keep draw state cheap) ---
+      const woodFloorMat = new THREE.MeshStandardMaterial({ map: barkMapTex, normalMap: barkNormalTex, color: 0x9a6b3f, roughness: 0.55, metalness: 0.05 });
+      if (woodFloorMat.map) { woodFloorMat.map = barkMapTex.clone(); woodFloorMat.map.wrapS = woodFloorMat.map.wrapT = THREE.RepeatWrapping; woodFloorMat.map.repeat.set(10, 8); woodFloorMat.map.needsUpdate = true; }
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0xf3e6cf, roughness: 0.9 });
+      const darkWoodMat = new THREE.MeshStandardMaterial({ map: barkMapTex, color: 0x4a3320, roughness: 0.6 });
+      const stoneMat = new THREE.MeshStandardMaterial({ color: 0xd9c7a7, roughness: 0.7, normalMap: cobbleNormalTex, normalScale: new THREE.Vector2(0.4, 0.4) });
+      const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.95 });
+      const rugMat = new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.95 });
+      const waxMat = new THREE.MeshStandardMaterial({ color: 0xfff3d6, roughness: 0.4 });
+      hallFlameMat = new THREE.MeshStandardMaterial({ color: 0xffd27a, emissive: 0xff9a3c, emissiveIntensity: 1.8, roughness: 0.2 });
+      hallNicheGlowMat = new THREE.MeshStandardMaterial({ color: 0xffe9c4, emissive: 0xffb45e, emissiveIntensity: 0.85, roughness: 0.6 });
+      hallWindowMat = new THREE.MeshBasicMaterial({ color: 0xfff2d0 });
+      const brassMat = new THREE.MeshStandardMaterial({ color: 0xc99a3f, metalness: 0.8, roughness: 0.3 });
+
+      // --- Room shell ---
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(28, 22), woodFloorMat);
+      floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; hallScene.add(floor);
+      const rug = new THREE.Mesh(new THREE.PlaneGeometry(9, 7), rugMat);
+      rug.rotation.x = -Math.PI / 2; rug.position.set(0, 0.012, -2.5); rug.receiveShadow = true; hallScene.add(rug);
+      const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(28, 22), ceilingMat);
+      ceiling.rotation.x = Math.PI / 2; ceiling.position.y = 7.2; hallScene.add(ceiling);
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(28, 7.2, 0.4), wallMat);
+      backWall.position.set(0, 3.6, -11); backWall.receiveShadow = true; hallScene.add(backWall);
+      const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.4, 7.2, 22), wallMat);
+      leftWall.position.set(-14, 3.6, 0); leftWall.receiveShadow = true; hallScene.add(leftWall);
+      const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.4, 7.2, 22), wallMat);
+      rightWall.position.set(14, 3.6, 0); rightWall.receiveShadow = true; hallScene.add(rightWall);
+      // Front wall with a central entrance opening
+      const frontL = new THREE.Mesh(new THREE.BoxGeometry(10, 7.2, 0.4), wallMat);
+      frontL.position.set(-9, 3.6, 11); hallScene.add(frontL);
+      const frontR = new THREE.Mesh(new THREE.BoxGeometry(10, 7.2, 0.4), wallMat);
+      frontR.position.set(9, 3.6, 11); hallScene.add(frontR);
+      const frontTop = new THREE.Mesh(new THREE.BoxGeometry(8, 2.4, 0.4), wallMat);
+      frontTop.position.set(0, 6.0, 11); hallScene.add(frontTop);
+      // Wainscot trim along back wall
+      const wainscot = new THREE.Mesh(new THREE.BoxGeometry(28, 0.9, 0.2), darkWoodMat);
+      wainscot.position.set(0, 0.45, -10.85); hallScene.add(wainscot);
+
+      // --- Columbarium niche wall (4 columns × 3 rows) ---
+      const cols = [-4.2, -1.4, 1.4, 4.2];
+      const rows = [1.7, 3.55, 5.4];
+      const accents = ['#fcd9a8', '#f6c1c1', '#c1e0f6', '#d6f6c1'];
+      let nicheIdx = 0;
+      rows.forEach((ry, r) => {
+        cols.forEach((cx, c) => {
+          const data = monumentDataList[nicheIdx] || null;
+          const isEmpty = !data;
+          const frame = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.78, 0.34), darkWoodMat);
+          frame.position.set(cx, ry, -10.78); frame.castShadow = true; hallScene.add(frame);
+          const glowBack = new THREE.Mesh(new THREE.PlaneGeometry(2.16, 1.5), hallNicheGlowMat);
+          glowBack.position.set(cx, ry, -10.58); hallScene.add(glowBack);
+          const plateTex = makeNichePlateTexture(data ? data.name : '', data ? data.dates : '', isEmpty, accents[c]);
+          const plateMat = new THREE.MeshStandardMaterial({ map: plateTex, roughness: 0.7, emissive: 0x2a1c0e, emissiveIntensity: isEmpty ? 0.15 : 0.35 });
+          const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.28, 1.6), plateMat);
+          plate.position.set(cx, ry, -10.5);
+          plate.userData = { isNiche: true, nicheData: data, isEmpty, baseEmissive: isEmpty ? 0.15 : 0.35, frame };
+          hallScene.add(plate);
+          hallClickTargets.push(plate);
+          // small urn / candle at the niche sill
+          const urn = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.3, 10), brassMat);
+          urn.position.set(cx + 0.82, ry - 0.72, -10.42); hallScene.add(urn);
+          const sillFlame = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), hallFlameMat);
+          sillFlame.position.set(cx + 0.82, ry - 0.5, -10.42); hallScene.add(sillFlame); hallFlames.push(sillFlame);
+          hallNiches.push({ plate, frame, data, isEmpty, cx, ry });
+          nicheIdx++;
+        });
+      });
+
+      // --- Central candle altar ---
+      const altarBase = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.5, 1.8), stoneMat);
+      altarBase.position.set(0, 0.25, -3); altarBase.castShadow = true; altarBase.receiveShadow = true; hallScene.add(altarBase);
+      const altarTop = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.42, 1.5), darkWoodMat);
+      altarTop.position.set(0, 0.71, -3); altarTop.castShadow = true; hallScene.add(altarTop);
+      altarTop.userData = { isAltar: true }; hallClickTargets.push(altarTop);
+      // rows of candles on the altar
+      for (let row = 0; row < 2; row++) {
+        for (let i = 0; i < 6; i++) {
+          const cx = -1.5 + i * 0.6;
+          const cz = -3 + (row === 0 ? -0.4 : 0.4);
+          const h = 0.34 + (i % 3) * 0.1;
+          const wax = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, h, 8), waxMat);
+          wax.position.set(cx, 0.92 + h / 2, cz); wax.castShadow = true; hallScene.add(wax);
+          const flame = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), hallFlameMat);
+          flame.position.set(cx, 0.92 + h + 0.08, cz); hallScene.add(flame); hallFlames.push(flame);
+        }
+      }
+      // Two tall floor candles flanking the altar
+      [-2.6, 2.6].forEach(cx => {
+        const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 1.5, 10), brassMat);
+        stand.position.set(cx, 0.75, -3); stand.castShadow = true; hallScene.add(stand);
+        const wax = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.5, 10), waxMat);
+        wax.position.set(cx, 1.75, -3); hallScene.add(wax);
+        const flame = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), hallFlameMat);
+        flame.position.set(cx, 2.08, -3); hallScene.add(flame); hallFlames.push(flame);
+      });
+
+      // --- Flower vases flanking the altar ---
+      [-3.6, 3.6].forEach((cx, vi) => {
+        const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 0.7, 12), stoneMat);
+        vase.position.set(cx, 0.35, -1.2); vase.castShadow = true; hallScene.add(vase);
+        const bloomColors = [0xf472b6, 0xfef08a, 0xfb7185, 0xa78bfa, 0xfda4af];
+        for (let f = 0; f < 5; f++) {
+          const a = (f / 5) * Math.PI * 2;
+          const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.7, 5), new THREE.MeshStandardMaterial({ color: 0x4d7c0f }));
+          stem.position.set(cx + Math.cos(a) * 0.1, 0.95, -1.2 + Math.sin(a) * 0.1);
+          stem.rotation.z = Math.cos(a) * 0.2; stem.rotation.x = Math.sin(a) * 0.2; hallScene.add(stem);
+          const bloom = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), new THREE.MeshStandardMaterial({ color: bloomColors[f], emissive: bloomColors[f], emissiveIntensity: 0.2, roughness: 0.5 }));
+          bloom.position.set(cx + Math.cos(a) * 0.22, 1.3, -1.2 + Math.sin(a) * 0.22); hallScene.add(bloom);
+        }
+      });
+
+      // --- Arched windows on the right wall + volumetric light shafts ---
+      const rayTex = makeHallRayTexture();
+      [-5, 0, 5].forEach((wz, wi) => {
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4.2, 2.2), darkWoodMat);
+        frame.position.set(13.85, 3.6, wz); hallScene.add(frame);
+        const pane = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 3.8), hallWindowMat);
+        pane.rotation.y = -Math.PI / 2; pane.position.set(13.72, 3.6, wz); hallScene.add(pane);
+        // light shaft falling into the room
+        const rayMat = new THREE.MeshBasicMaterial({ map: rayTex, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, color: 0xffe2b0 });
+        const ray = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 3.4), rayMat);
+        ray.position.set(9.5, 2.6, wz); ray.rotation.z = 0.5; ray.rotation.y = -Math.PI / 2 + 0.15;
+        hallScene.add(ray); hallWindowRays.push(ray);
+      });
+
+      // --- Hanging pendant lanterns ---
+      [-6, 0, 6].forEach((lx, li) => {
+        const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.6, 5), darkWoodMat);
+        cord.position.set(lx, 6.4, -2); hallScene.add(cord);
+        const shade = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.6, 12, 1, true), new THREE.MeshStandardMaterial({ color: 0xffe9c4, emissive: 0xffb45e, emissiveIntensity: 1.1, side: THREE.DoubleSide, roughness: 0.5 }));
+        shade.position.set(lx, 5.5, -2); hallScene.add(shade);
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), hallFlameMat);
+        bulb.position.set(lx, 5.4, -2); hallScene.add(bulb); hallFlames.push(bulb);
+        const glow = createGlowSprite('#ffb45e', 1.6); glow.position.set(lx, 5.4, -2); hallScene.add(glow); hallGlowSprites.push(glow);
+      });
+
+      // --- Guestbook podium near the entrance ---
+      const podium = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.1, 0.8), darkWoodMat);
+      podium.position.set(-5.5, 0.55, 8); podium.castShadow = true; hallScene.add(podium);
+      const bookL = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.9), new THREE.MeshStandardMaterial({ color: 0xfffaf0, roughness: 0.8 }));
+      bookL.position.set(-5.72, 1.16, 8); bookL.rotation.x = -Math.PI / 2 + 0.18; bookL.rotation.z = 0.06; hallScene.add(bookL);
+      const bookR = bookL.clone(); bookR.position.x = -5.28; bookR.rotation.z = -0.06; hallScene.add(bookR);
+      podium.userData = { isGuestbook: true }; hallClickTargets.push(podium);
+      const guestSign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.4), new THREE.MeshBasicMaterial({ map: makeHallSignTexture('💌 訪客留言簿'), transparent: true }));
+      guestSign.position.set(-5.5, 1.7, 8); hallScene.add(guestSign);
+
+      // --- Lighting (small budget: 1 hemi + 1 shadowed key + 2 candle points) ---
+      hallHemi = new THREE.HemisphereLight(0xfff1e0, 0x2a1c10, 0.5);
+      hallScene.add(hallHemi);
+      hallKeyLight = new THREE.DirectionalLight(0xffe6c0, 1.2);
+      hallKeyLight.position.set(13, 8, 1);
+      hallKeyLight.target.position.set(0, 1, -3);
+      hallKeyLight.castShadow = true;
+      hallKeyLight.shadow.mapSize.set(1024, 1024);
+      hallKeyLight.shadow.camera.near = 1; hallKeyLight.shadow.camera.far = 40;
+      hallKeyLight.shadow.camera.left = -16; hallKeyLight.shadow.camera.right = 16;
+      hallKeyLight.shadow.camera.top = 12; hallKeyLight.shadow.camera.bottom = -4;
+      hallKeyLight.shadow.bias = -0.0006;
+      hallKeyLight.shadow.autoUpdate = false; // static baked shadow
+      hallScene.add(hallKeyLight); hallScene.add(hallKeyLight.target);
+      hallCandleLightA = new THREE.PointLight(0xffa040, 1.2, 14, 2);
+      hallCandleLightA.position.set(0, 1.9, -3); hallScene.add(hallCandleLightA);
+      hallCandleLightB = new THREE.PointLight(0xffb060, 0.8, 16, 2);
+      hallCandleLightB.position.set(0, 3.2, -9); hallScene.add(hallCandleLightB);
+
+      hallBuilt = true;
+    }
+
+    // Soft gradient texture for window light shafts.
+    function makeHallRayTexture() {
+      const c = document.createElement('canvas'); c.width = 128; c.height = 64;
+      const ctx = c.getContext('2d');
+      const g = ctx.createLinearGradient(0, 0, 128, 0);
+      g.addColorStop(0, 'rgba(255,236,200,0.95)');
+      g.addColorStop(0.5, 'rgba(255,224,176,0.35)');
+      g.addColorStop(1, 'rgba(255,224,176,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 64);
+      const vg = ctx.createLinearGradient(0, 0, 0, 64);
+      vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(0.5, 'rgba(0,0,0,1)'); vg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalCompositeOperation = 'destination-in'; ctx.fillStyle = vg; ctx.fillRect(0, 0, 128, 64);
+      return new THREE.CanvasTexture(c);
+    }
+
+    function makeHallSignTexture(text) {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 72;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = 'rgba(26,18,11,0.85)'; ctx.fillRect(0, 0, 256, 72);
+      ctx.strokeStyle = '#c99a3f'; ctx.lineWidth = 3; ctx.strokeRect(3, 3, 250, 66);
+      ctx.fillStyle = '#ffe9c4'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '700 30px "Microsoft JhengHei", sans-serif'; ctx.fillText(text, 128, 38);
+      return new THREE.CanvasTexture(c);
+    }
+
+    function updateHallCamera(dt) {
+      const o = hallOrbit;
+      if (o.autoOrbit && !hallPointer.down) o.desiredTheta += dt * 0.1;
+      const k = 1 - Math.pow(0.0015, Math.min(dt, 0.05));
+      o.theta += (o.desiredTheta - o.theta) * k;
+      o.phi += (o.desiredPhi - o.phi) * k;
+      o.radius += (o.desiredRadius - o.radius) * k;
+      o.fov += (o.desiredFov - o.fov) * k;
+      o.target.lerp(o.desiredTarget, k);
+      hallCamera.fov = o.fov; hallCamera.updateProjectionMatrix();
+      const sp = Math.sin(o.phi), cp = Math.cos(o.phi);
+      hallCamera.position.set(
+        o.target.x + o.radius * sp * Math.sin(o.theta),
+        o.target.y + o.radius * cp,
+        o.target.z + o.radius * sp * Math.cos(o.theta)
+      );
+      hallCamera.lookAt(o.target);
+    }
+
+    function updateHallFrame(dt, t) {
+      const flick = hallOrbit.candleInt;
+      hallFlameMat.emissiveIntensity = (1.7 + Math.sin(t * 11) * 0.45 + Math.sin(t * 27) * 0.15) * flick;
+      for (let i = 0; i < hallFlames.length; i++) {
+        const s = 1 + Math.sin(t * 9 + i * 1.7) * 0.13 + Math.sin(t * 23 + i) * 0.05;
+        hallFlames[i].scale.set(1, s, 1);
+      }
+      hallCandleLightA.intensity = (1.15 + Math.sin(t * 8) * 0.18) * flick;
+      hallCandleLightB.intensity = (0.75 + Math.sin(t * 6 + 1) * 0.12) * flick;
+      hallNicheGlowMat.emissiveIntensity = 0.8 + Math.sin(t * 1.5) * 0.08;
+      updateHallCamera(dt);
+      if (hallComposer) hallComposer.render();
+      else renderer.render(hallScene, hallCamera);
+      hallLastDrawCalls = renderer.info.render.calls;
+    }
+
+    function hallZoomBy(delta) {
+      hallOrbit.desiredRadius = clampNum(hallOrbit.desiredRadius + delta * 22, 3, 22);
+    }
+
+    window.setHallView = function(name, snap = false) {
+      const v = HALL_VIEWS[name];
+      if (!v || !hallBuilt) return;
+      hallCurrentView = name;
+      hallOrbit.desiredTarget.set(v.target[0], v.target[1], v.target[2]);
+      hallOrbit.desiredRadius = v.radius;
+      hallOrbit.desiredTheta = v.theta;
+      hallOrbit.desiredPhi = v.phi;
+      if (snap) {
+        hallOrbit.target.copy(hallOrbit.desiredTarget);
+        hallOrbit.radius = v.radius; hallOrbit.theta = v.theta; hallOrbit.phi = v.phi;
+      }
+      document.querySelectorAll('.hall-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+    };
+
+    window.enterMemorialHall = function() {
+      if (hallActive) return;
+      if (!hallBuilt) buildHall();
+      hallActive = true;
+      document.body.classList.add('in-hall');
+      window.closeMemorialModal();
+      renderer.shadowMap.enabled = true;
+      hallKeyLight.shadow.needsUpdate = true;
+      window.setHallView('overview', true);
+      const sub = document.getElementById('sync-status');
+      if (sub) sub.innerText = '室內靈龕紀念廳 ‧ 點蠟燭・獻花・留言・轉換視角';
+      if (window.triggerHaptics) window.triggerHaptics([30, 20, 30], 0.4, 0.5, 100, '進入室內靈龕紀念廳');
+    };
+
+    window.exitMemorialHall = function() {
+      if (!hallActive) return;
+      hallActive = false;
+      hallPointer.down = false;
+      document.body.classList.remove('in-hall');
+      window.closeMemorialModal();
+      renderer.setPixelRatio(getQualityPixelRatio(currentQualityMode));
+      applyRenderQuality(currentQualityMode, { persist: false });
+      const sub = document.getElementById('sync-status');
+      if (sub) sub.innerText = '線上靈園 ‧ 湖畔步道與水波錦鯉 ‧ 自由漫遊';
+      if (window.triggerHaptics) window.triggerHaptics([25, 15, 25], 0.35, 0.45, 90, '返回湖光彼岸靈園');
+    };
+
+    // --- Hall control panel live bindings ---
+    window.hallSetCandle = function(v) { hallOrbit.candleInt = parseFloat(v); };
+    window.hallSetAmbient = function(v) { hallOrbit.ambientInt = parseFloat(v); if (hallHemi) hallHemi.intensity = 0.5 * hallOrbit.ambientInt; };
+    window.hallSetWindow = function(v) {
+      hallOrbit.windowInt = parseFloat(v);
+      if (hallKeyLight) hallKeyLight.intensity = 1.2 * hallOrbit.windowInt;
+      hallWindowRays.forEach(r => { r.material.opacity = 0.28 * hallOrbit.windowInt; });
+      if (hallWindowMat) hallWindowMat.color.setHex(hallOrbit.windowInt > 0.05 ? 0xfff2d0 : 0x6b5a40);
+    };
+    window.hallSetFov = function(v) { hallOrbit.desiredFov = clampNum(parseFloat(v), 30, 85); };
+    window.hallToggleAutoOrbit = function(btn) {
+      hallOrbit.autoOrbit = !hallOrbit.autoOrbit;
+      if (btn) btn.classList.toggle('active', hallOrbit.autoOrbit);
+    };
+    window.hallToggleGlow = function(btn) {
+      const on = !hallComposer;
+      if (on && typeof THREE.EffectComposer !== 'undefined' && typeof THREE.UnrealBloomPass !== 'undefined') {
+        try {
+          hallComposer = new THREE.EffectComposer(renderer);
+          hallComposer.addPass(new THREE.RenderPass(hallScene, hallCamera));
+          hallBloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.5, 0.82);
+          hallComposer.addPass(hallBloomPass);
+          hallComposer.setSize(window.innerWidth, window.innerHeight);
+        } catch (e) { hallComposer = null; hallBloomPass = null; }
+      } else if (!on && hallComposer) {
+        if (typeof hallComposer.dispose === 'function') hallComposer.dispose();
+        hallComposer = null; hallBloomPass = null;
+      }
+      if (btn) btn.classList.toggle('active', !!hallComposer);
+    };
+
+    // Reset all hall ambience + camera controls to their defaults.
+    window.resetHallControls = function() {
+      const setSlider = (id, val, fmt) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+        const lab = document.getElementById(id + '-val');
+        if (lab) lab.innerText = fmt;
+      };
+      window.hallSetCandle(1); setSlider('hall-candle', 1, '1.00');
+      window.hallSetAmbient(1); setSlider('hall-ambient', 1, '1.00');
+      window.hallSetWindow(1); setSlider('hall-window', 1, '1.00');
+      window.hallSetFov(50); setSlider('hall-fov', 50, '50°');
+      hallOrbit.autoOrbit = false;
+      const ao = document.getElementById('hall-auto-orbit'); if (ao) ao.classList.remove('active');
+      window.setHallView('overview');
+    };
+
+    // Randomize a warm, coherent ambience (candle / ambient / window) for discovery.
+    window.randomizeHallAmbience = function() {
+      const rnd = (lo, hi) => lo + Math.random() * (hi - lo);
+      const candle = rnd(0.6, 1.8), ambient = rnd(0.4, 1.3), win = rnd(0.3, 1.6);
+      const setSlider = (id, val) => {
+        const el = document.getElementById(id); if (el) el.value = val.toFixed(2);
+        const lab = document.getElementById(id + '-val'); if (lab) lab.innerText = val.toFixed(2);
+      };
+      window.hallSetCandle(candle); setSlider('hall-candle', candle);
+      window.hallSetAmbient(ambient); setSlider('hall-ambient', ambient);
+      window.hallSetWindow(win); setSlider('hall-window', win);
+      if (window.triggerEmote) window.triggerEmote('🎲 已調製一組新的溫馨氛圍');
+    };
+
+    // --- Hall pointer input: drag to orbit, click to interact ---
+    function hallNDCFromEvent(e) {
+      hallMouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+      hallMouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    }
+    function handleHallClick(e) {
+      hallNDCFromEvent(e);
+      hallRaycaster.setFromCamera(hallMouseNDC, hallCamera);
+      const hits = hallRaycaster.intersectObjects(hallClickTargets, false);
+      if (!hits.length) return;
+      const ud = hits[0].object.userData;
+      if (ud.isNiche) {
+        if (ud.nicheData) {
+          openMemorialModal(ud.nicheData);
+          if (window.triggerHaptics) window.triggerHaptics([20, 15, 20], 0.3, 0.4, 80, '點亮靈龕・獻花祈思');
+        } else {
+          if (window.triggerEmote) window.triggerEmote('🕯️ 這個位置，留給即將到來的思念');
+        }
+      } else if (ud.isAltar) {
+        if (window.offerGift) window.offerGift('candle');
+        if (window.triggerEmote) window.triggerEmote('🕯️ 已點亮一盞長明心燈');
+      } else if (ud.isGuestbook) {
+        openMemorialModal({
+          name: '訪客留言簿', dates: '寫下想說的話', role: '雲端訪客',
+          bio: '有些愛，永遠不會離開。牠們只是更安靜地走在我們身旁。留下一句心底話，陪伴彼此。',
+          messages: (monumentDataList[0] && monumentDataList[0].messages) ? monumentDataList[0].messages.slice(0, 3) : []
+        });
+      }
+    }
+    function updateHallHover(e) {
+      hallNDCFromEvent(e);
+      hallRaycaster.setFromCamera(hallMouseNDC, hallCamera);
+      const hits = hallRaycaster.intersectObjects(hallClickTargets, false);
+      const obj = hits.length ? hits[0].object : null;
+      if (hallHovered && hallHovered !== obj && hallHovered.userData.isNiche) {
+        hallHovered.material.emissiveIntensity = hallHovered.userData.baseEmissive;
+      }
+      hallHovered = obj;
+      if (obj && obj.userData.isNiche) obj.material.emissiveIntensity = obj.userData.baseEmissive + 0.5;
+      renderer.domElement.style.cursor = obj ? 'pointer' : (hallPointer.down ? 'grabbing' : 'grab');
+    }
+
+    container.addEventListener('pointerdown', (e) => {
+      if (!hallActive) return;
+      if (e.target.closest('.hall-panel') || e.target.closest('.hall-topbar') || e.target.closest('.modal-card')) return;
+      hallPointer.down = true; hallPointer.moved = false;
+      hallPointer.x = e.clientX; hallPointer.y = e.clientY;
+      renderer.domElement.style.cursor = 'grabbing';
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!hallActive) return;
+      if (!hallPointer.down) { updateHallHover(e); return; }
+      const dx = e.clientX - hallPointer.x, dy = e.clientY - hallPointer.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) hallPointer.moved = true;
+      hallOrbit.desiredTheta -= dx * 0.005;
+      hallOrbit.desiredPhi = clampNum(hallOrbit.desiredPhi - dy * 0.004, 0.2, 1.45);
+      hallPointer.x = e.clientX; hallPointer.y = e.clientY;
+    });
+    window.addEventListener('pointerup', (e) => {
+      if (!hallActive) return;
+      if (hallPointer.down && !hallPointer.moved) handleHallClick(e);
+      hallPointer.down = false;
+      renderer.domElement.style.cursor = 'grab';
+    });
+
+    // Diagnostic & E2E inspection hook for the hall.
+    window.__REIEN_HALL__ = {
+      enter: () => window.enterMemorialHall(),
+      exit: () => window.exitMemorialHall(),
+      setView: (v) => window.setHallView(v),
+      // Project a niche plate center to screen pixels so E2E can dispatch a real
+      // pointerdown/up at it (exercises the full orbit-click raycast path).
+      nicheScreenPos: (i = 0) => {
+        const n = hallNiches[i];
+        if (!n || !hallCamera) return null;
+        const v = new THREE.Vector3();
+        n.plate.getWorldPosition(v);
+        v.project(hallCamera);
+        return {
+          x: (v.x * 0.5 + 0.5) * window.innerWidth,
+          y: (-v.y * 0.5 + 0.5) * window.innerHeight,
+          filled: !n.isEmpty, name: n.data ? n.data.name : null
+        };
+      },
+      getState: () => ({
+        active: hallActive,
+        built: hallBuilt,
+        currentView: hallCurrentView,
+        nicheCount: hallNiches.length,
+        filledNiches: hallNiches.filter(n => !n.isEmpty).length,
+        candleCount: hallFlames.length,
+        clickTargets: hallClickTargets.length,
+        cameraPos: hallCamera ? { x: +hallCamera.position.x.toFixed(2), y: +hallCamera.position.y.toFixed(2), z: +hallCamera.position.z.toFixed(2) } : null,
+        radius: +hallOrbit.radius.toFixed(2),
+        fov: +hallOrbit.fov.toFixed(1),
+        autoOrbit: hallOrbit.autoOrbit,
+        hasBloom: !!hallComposer,
+        drawCalls: hallActive ? hallLastDrawCalls : 0,
+        lights: hallScene ? hallScene.children.filter(o => o.isLight).length : 0
+      })
+    };
+
     function animate(nowMs) {
       requestAnimationFrame(animate);
       const frameNow = typeof nowMs === 'number' ? nowMs : performance.now();
@@ -4607,6 +5415,12 @@
       recordRenderFrame(frameNow);
       const dt = clock.getDelta();
       const t = clock.getElapsedTime();
+
+      // Indoor memorial hall renders its own scene; skip all outdoor updates.
+      if (hallActive) {
+        updateHallFrame(dt, t);
+        return;
+      }
 
       // Update GLSL Water, Puddle, Komorebi & Volumetric God-Ray Shaders
       waterUniforms.uTime.value = t;
@@ -4630,9 +5444,7 @@
         tc.mesh.rotation.z = Math.sin(t * 1.3 + tc.phase) * 0.025;
         tc.mesh.rotation.x = Math.cos(t * 1.0 + tc.phase) * 0.018;
       });
-      grassBlades.forEach(gb => {
-        gb.mesh.rotation.z = Math.sin(t * 2.2 + gb.phase) * 0.09;
-      });
+      updateGrassInstances(t);
 
       // Lotus pads in the river bay
       floatingLanterns.forEach(fl => {
@@ -4995,6 +5807,11 @@
       renderer.setPixelRatio(getQualityPixelRatio(currentQualityMode));
       renderer.setSize(window.innerWidth, window.innerHeight);
       if (composer) composer.setSize(window.innerWidth, window.innerHeight);
+      if (hallCamera) {
+        hallCamera.aspect = window.innerWidth / window.innerHeight;
+        hallCamera.updateProjectionMatrix();
+      }
+      if (hallComposer) hallComposer.setSize(window.innerWidth, window.innerHeight);
     });
   </script>
 </body>

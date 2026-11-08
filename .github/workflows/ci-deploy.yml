@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   test-and-verify:
-    name: "Run 15 E2E & WebGL Verification Tests (CDP)"
+    name: "Run 17 E2E & WebGL Verification Tests (CDP)"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -34,7 +34,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Execute Automated CI/CD E2E Test Suite (TC-01 to TC-15)
+      - name: Execute Automated CI/CD E2E Test Suite (TC-01 to TC-17)
         run: |
           python tests/e2e_ci_suite.py
 
