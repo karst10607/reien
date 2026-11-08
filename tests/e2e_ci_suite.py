@@ -410,25 +410,39 @@ def run_browser_suite(screenshot_dir: str = None):
         # TC-05: Virtual Joystick Pointer Drag & Character Movement
         # -----------------------------------------------------------------
         print("[TC-05] Virtual Joystick Pointer Drag & Character Movement...", end=" ", flush=True)
-        eval_js(ws, """
-            window.__REIEN_DIAG__.teleportPlayer(0, 6);
-            const zone = document.getElementById('joystick-zone');
-            const r = zone.getBoundingClientRect();
-            const cx = r.left + r.width / 2;
-            const cy = r.top + r.height / 2;
-            zone.dispatchEvent(new PointerEvent('pointerdown', { clientX: cx, clientY: cy, pointerId: 1, bubbles: true }));
-            window.dispatchEvent(new PointerEvent('pointermove', { clientX: cx + 38, clientY: cy - 32, pointerId: 1, bubbles: true }));
-            if (window.__REIEN_DIAG__.setJoystickVector) {
-                window.__REIEN_DIAG__.setJoystickVector(0.75, -0.65);
-            }
-        """)
-        time.sleep(0.6)
-
         moved_res = eval_js(ws, """
-            window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, bubbles: true }));
-            if (window.__REIEN_DIAG__.setJoystickVector) window.__REIEN_DIAG__.setJoystickVector(0, 0);
-            const p = window.__REIEN_DIAG__.getState().playerPos;
-            return Math.hypot(p.x - 0, p.z - 6);
+            return (async () => {
+                window.__REIEN_DIAG__.teleportPlayer(0, 6);
+                const zone = document.getElementById('joystick-zone');
+                const r = zone.getBoundingClientRect();
+                const cx = r.left + r.width / 2;
+                const cy = r.top + r.height / 2;
+                zone.dispatchEvent(new PointerEvent('pointerdown', { clientX: cx, clientY: cy, pointerId: 1, bubbles: true }));
+                window.dispatchEvent(new PointerEvent('pointermove', { clientX: cx + 38, clientY: cy - 32, pointerId: 1, bubbles: true }));
+                if (window.__REIEN_DIAG__.setJoystickVector) {
+                    window.__REIEN_DIAG__.setJoystickVector(0.75, -0.65);
+                }
+
+                // Actively pump 25 animation frames while joystick is held
+                await new Promise(resolve => {
+                    let frames = 0;
+                    const onFrame = () => {
+                        frames++;
+                        if (frames >= 25) resolve();
+                        else requestAnimationFrame(onFrame);
+                    };
+                    requestAnimationFrame(onFrame);
+                });
+
+                const p = window.__REIEN_DIAG__.getState().playerPos;
+                const dist = Math.hypot(p.x - 0, p.z - 6);
+
+                // Release pointer & reset joystick
+                window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, bubbles: true }));
+                if (window.__REIEN_DIAG__.setJoystickVector) window.__REIEN_DIAG__.setJoystickVector(0, 0);
+
+                return dist;
+            })();
         """)
         assert_true(moved_res > 0.35, f"Character did not move via virtual joystick drag (moved {moved_res:.3f})")
         print("PASS")
@@ -537,15 +551,13 @@ def run_browser_suite(screenshot_dir: str = None):
         # TC-09: Tree Canopy & Indoor House See-Through Occlusion Fade
         # -----------------------------------------------------------------
         print("[TC-09] Tree Canopy & Indoor House See-Through Occlusion...", end=" ", flush=True)
-        eval_js(ws, "window.__REIEN_DIAG__.teleportPlayer(-11.0, -10.0);")
-        time.sleep(1.0)
+        eval_js(ws, "window.__REIEN_DIAG__.teleportPlayer(-11.0, -10.0, true);")
         indoor_alpha = eval_js(ws, "return window.__REIEN_DIAG__.getState().minOccludableAlpha;")
-        assert_true(indoor_alpha < 0.32, f"Expected indoor house occlusion alpha < 0.32, got {indoor_alpha:.3f}")
+        assert_true(indoor_alpha < 0.25, f"Expected indoor house occlusion alpha < 0.25, got {indoor_alpha:.3f}")
 
-        eval_js(ws, "window.__REIEN_DIAG__.teleportPlayer(-5.2, 5.5);")
-        time.sleep(1.0)
+        eval_js(ws, "window.__REIEN_DIAG__.teleportPlayer(-5.2, 5.5, true);")
         tree_alpha = eval_js(ws, "return window.__REIEN_DIAG__.getState().minOccludableAlpha;")
-        assert_true(tree_alpha < 0.32, f"Expected tree canopy occlusion alpha < 0.32, got {tree_alpha:.3f}")
+        assert_true(tree_alpha < 0.25, f"Expected tree canopy occlusion alpha < 0.25, got {tree_alpha:.3f}")
         print("PASS")
 
         # -----------------------------------------------------------------

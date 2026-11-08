@@ -4248,15 +4248,69 @@
         hasVibrateAPI: typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function',
         connectedGamepads: (typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean).map(g => ({ id: g.id, hasVibration: !!(g.vibrationActuator && g.vibrationActuator.playEffect) })) : [])
       }),
-      teleportPlayer: (x, z) => {
+      teleportPlayer: (x, z, snap = false) => {
         isMoving = false;
         const groundY = isPointOnDock(x, z) ? 0.14 : 0;
         player.position.set(x, groundY, z);
         targetPos.set(x, groundY, z);
+        if (snap) {
+          const baseDist = 24.5 * cameraZoom;
+          const pitchFactor = cameraZoom < 0.8 ? (0.55 + cameraZoom * 0.35) : 0.82;
+          const camX = player.position.x + Math.cos(cameraYaw) * baseDist;
+          const camZ = player.position.z + Math.sin(cameraYaw) * baseDist;
+          const camY = player.position.y + baseDist * pitchFactor;
+          camera.position.set(camX, camY, camZ);
+          camera.lookAt(player.position.x, player.position.y + 1.05, player.position.z);
+          updateOcclusion(0.016, true);
+        }
       },
       feedFish: (tx, tz) => window.feedKoi(tx, tz),
       setJoystickVector: (x, y) => { joyVecX = x; joyVecY = y; }
     };
+
+    function updateOcclusion(dt, snap = false) {
+      const camXZ = new THREE.Vector2(camera.position.x, camera.position.z);
+      const plrXZ = new THREE.Vector2(player.position.x, player.position.z);
+      const segVec = new THREE.Vector2().subVectors(plrXZ, camXZ);
+      const segLenSq = segVec.lengthSq();
+
+      occludableObjects.forEach(item => {
+        const objXZ = new THREE.Vector2(item.group.position.x, item.group.position.z);
+        const distToPlayer = objXZ.distanceTo(plrXZ);
+        const distToCam = objXZ.distanceTo(camXZ);
+
+        let tProj = 0;
+        if (segLenSq > 0.001) {
+          tProj = THREE.MathUtils.clamp(
+            new THREE.Vector2().subVectors(objXZ, camXZ).dot(segVec) / segLenSq,
+            0.0, 1.0
+          );
+        }
+        const closestPt = new THREE.Vector2().copy(camXZ).addScaledVector(segVec, tProj);
+        const distToRay = objXZ.distanceTo(closestPt);
+
+        let targetAlpha = 1.0;
+        if (distToPlayer < item.radius * 0.85) {
+          targetAlpha = item.type === 'house' ? 0.16 : 0.14;
+        } else if (tProj > 0.08 && tProj < 0.98 && distToRay < item.radius * 0.82) {
+          targetAlpha = 0.15;
+        } else if (distToCam < 6.5) {
+          targetAlpha = 0.12;
+        }
+
+        if (snap) {
+          item.currentAlpha = targetAlpha;
+        } else {
+          item.currentAlpha += (targetAlpha - item.currentAlpha) * Math.min(1.0, Math.max(0.18, dt * 10.0));
+        }
+        item.materials.forEach(mat => {
+          mat.opacity = item.currentAlpha;
+          if (!mat.map || mat === item.materials[0]) {
+            mat.depthWrite = item.currentAlpha > 0.85;
+          }
+        });
+      });
+    }
 
     function animate() {
       requestAnimationFrame(animate);
@@ -4556,50 +4610,8 @@
       camera.position.set(camX, camY, camZ);
       camera.lookAt(player.position.x, player.position.y + 1.05, player.position.z);
 
-      // RO-Style See-Through Occlusion Transparency (When Player Walks Under Trees or Enters Indoor Buildings, or Object Blocks Camera->Player Ray)
-      const camXZ = new THREE.Vector2(camera.position.x, camera.position.z);
-      const plrXZ = new THREE.Vector2(player.position.x, player.position.z);
-      const segVec = new THREE.Vector2().subVectors(plrXZ, camXZ);
-      const segLenSq = segVec.lengthSq();
-
-      occludableObjects.forEach(item => {
-        const objXZ = new THREE.Vector2(item.group.position.x, item.group.position.z);
-        const distToPlayer = objXZ.distanceTo(plrXZ);
-        const distToCam = objXZ.distanceTo(camXZ);
-
-        // Project object center onto Camera->Player segment in XZ plane
-        let tProj = 0;
-        if (segLenSq > 0.001) {
-          tProj = THREE.MathUtils.clamp(
-            new THREE.Vector2().subVectors(objXZ, camXZ).dot(segVec) / segLenSq,
-            0.0, 1.0
-          );
-        }
-        const closestPt = new THREE.Vector2().copy(camXZ).addScaledVector(segVec, tProj);
-        const distToRay = objXZ.distanceTo(closestPt);
-
-        let targetAlpha = 1.0;
-        // 1. Player is directly underneath tree canopy or inside building interior
-        if (distToPlayer < item.radius * 0.85) {
-          targetAlpha = item.type === 'house' ? 0.16 : 0.14;
-        }
-        // 2. Tree or building is between Camera and Player, blocking line of sight
-        else if (tProj > 0.08 && tProj < 0.98 && distToRay < item.radius * 0.82) {
-          targetAlpha = 0.15;
-        }
-        // 3. Camera lens is right inside a tree canopy when zoomed in
-        else if (distToCam < 6.5) {
-          targetAlpha = 0.12;
-        }
-
-        item.currentAlpha += (targetAlpha - item.currentAlpha) * Math.min(1.0, Math.max(0.18, dt * 10.0));
-        item.materials.forEach(mat => {
-          mat.opacity = item.currentAlpha;
-          if (!mat.map || mat === item.materials[0]) {
-            mat.depthWrite = item.currentAlpha > 0.85;
-          }
-        });
-      });
+      // RO-Style See-Through Occlusion Transparency
+      updateOcclusion(dt, false);
 
       // Weather Particle Updates
       if (petals.visible) {
