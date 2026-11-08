@@ -424,6 +424,10 @@
             <span>👥</span>
             <span id="sim-text">陪伴旅人 (開)</span>
           </button>
+          <button id="btn-quality" class="btn-glass active" onclick="toggleRenderQuality()" title="切換畫質與效能模式 (60 FPS)">
+            <span id="quality-icon">⚡</span>
+            <span id="quality-text">流暢 (60FPS)</span>
+          </button>
           <button id="btn-vibe-test" class="btn-glass" onclick="testHapticsAndGamepad()" title="測試手機震動與藍牙/有線手把連線狀態">
             <span>📳</span>
             <span id="vibe-text">震動/手把測試</span>
@@ -598,9 +602,9 @@
       if (lbl) lbl.innerText = pct + '%';
     };
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: false, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth <= 920 ? 1.25 : 1.5));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -608,20 +612,9 @@
     renderer.outputEncoding = THREE.LinearEncoding;
     container.appendChild(renderer.domElement);
 
-    // Optional UnrealBloomPass Post-Processing (like Godot Glow / WorldEnvironment)
+    // Optional Post-Processing (Off by default for buttery 60 FPS, toggleable via Quality Mode)
     let composer = null;
     let bloomPass = null;
-    try {
-      if (THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass) {
-        composer = new THREE.EffectComposer(renderer);
-        const renderPass = new THREE.RenderPass(scene, camera);
-        composer.addPass(renderPass);
-        bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.16, 0.35, 0.92);
-        composer.addPass(bloomPass);
-      }
-    } catch (e) {
-      composer = null;
-    }
 
     /* =======================================================================
        2. PBR Procedural Texture & Tangent-Space Normal Map Engine
@@ -1002,8 +995,8 @@
     const mainLight = new THREE.DirectionalLight(0xfb923c, 1.85);
     mainLight.position.set(28, 22, 18);
     mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width = 4096;
-    mainLight.shadow.mapSize.height = 4096;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
     mainLight.shadow.camera.near = 0.5;
     mainLight.shadow.camera.far = 120;
     const d = 27;
@@ -4208,6 +4201,68 @@
       mapCtx.stroke();
     }
 
+    // Throttled Minimap Draw (8Hz max or on player movement to eliminate 60Hz 2D canvas pipeline stalls)
+    let lastMapDrawTime = 0;
+    let lastPlayerMapX = null;
+    let lastPlayerMapZ = null;
+
+    function maybeDrawMinimap(t) {
+      if (!mapCtx || !mapCanvas) return;
+      const moved = lastPlayerMapX === null || Math.hypot(player.position.x - lastPlayerMapX, player.position.z - lastPlayerMapZ) > 0.08;
+      if (moved || (t - lastMapDrawTime) > 0.125) {
+        drawMinimap();
+        lastMapDrawTime = t;
+        lastPlayerMapX = player.position.x;
+        lastPlayerMapZ = player.position.z;
+      }
+    }
+
+    // High-Performance Dynamic Render Quality Profile (Aligned with koi.vividcats.org architecture)
+    let currentQualityMode = 'performance'; // 'performance' (60 FPS) or 'quality' (High)
+
+    function applyRenderQuality(mode) {
+      currentQualityMode = mode;
+      const isPerf = mode === 'performance';
+      const btn = document.getElementById('btn-quality');
+      const text = document.getElementById('quality-text');
+      const icon = document.getElementById('quality-icon');
+
+      const maxPR = (window.innerWidth <= 920 || isPerf) ? 1.25 : 1.75;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPR));
+
+      if (isPerf) {
+        if (btn) btn.classList.add('active');
+        if (text) text.innerText = '流暢 (60FPS)';
+        if (icon) icon.innerText = '⚡';
+        composer = null;
+        mainLight.shadow.mapSize.width = 2048;
+        mainLight.shadow.mapSize.height = 2048;
+      } else {
+        if (btn) btn.classList.remove('active');
+        if (text) text.innerText = '極致畫質';
+        if (icon) icon.innerText = '✨';
+        if (typeof THREE.EffectComposer !== 'undefined' && typeof THREE.UnrealBloomPass !== 'undefined') {
+          try {
+            composer = new THREE.EffectComposer(renderer);
+            composer.addPass(new THREE.RenderPass(scene, camera));
+            composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.14, 0.35, 0.92));
+          } catch(e) { composer = null; }
+        }
+        mainLight.shadow.mapSize.width = 4096;
+        mainLight.shadow.mapSize.height = 4096;
+      }
+      if (mainLight.shadow.map) {
+        mainLight.shadow.map.dispose();
+        mainLight.shadow.map = null;
+      }
+      renderer.shadowMap.needsUpdate = true;
+    }
+
+    window.toggleRenderQuality = function() {
+      applyRenderQuality(currentQualityMode === 'performance' ? 'quality' : 'performance');
+      window.triggerHaptics([40, 25, 40], 0.45, 0.6, 120, `切換為【${currentQualityMode === 'performance' ? '流暢 60FPS' : '極致畫質'}】模式`);
+    };
+
     const clock = new THREE.Clock();
     const flashEl = document.getElementById('lightning-overlay');
     let nextLightningTime = 3.5;
@@ -4218,6 +4273,9 @@
     window.__REIEN_DIAG__ = {
       getState: () => ({
         themeStyle: 'koi-lake-town',
+        themeTitle: '線上靈園 · 湖光彼岸',
+        qualityMode: currentQualityMode,
+        hasComposer: !!composer,
         dockPresent: true,
         dockPos: { x: (dockStartX + dockEndX) * 0.5, z: dockCenterZ },
         koiFishCount: koiList.length,
@@ -4248,6 +4306,7 @@
         hasVibrateAPI: typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function',
         connectedGamepads: (typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean).map(g => ({ id: g.id, hasVibration: !!(g.vibrationActuator && g.vibrationActuator.playEffect) })) : [])
       }),
+      setQuality: (mode) => applyRenderQuality(mode),
       teleportPlayer: (x, z, snap = false) => {
         isMoving = false;
         const groundY = isPointOnDock(x, z) ? 0.14 : 0;
@@ -4735,7 +4794,7 @@
         }
       }
 
-      drawMinimap();
+      maybeDrawMinimap(t);
       if (composer) {
         composer.render();
       } else {
