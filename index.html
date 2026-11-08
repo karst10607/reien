@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>線上靈園 · 湖光彼岸 ‧ 雲端紀念花園 (Reien Memorial Garden)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
@@ -581,6 +582,48 @@
        ======================================================================= */
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
+
+    // High-performance BufferGeometry batching merger (with zero-dependency fallback)
+    function mergeBufferGeometries(geometries) {
+      if (!geometries || geometries.length === 0) return null;
+      if (geometries.length === 1) return geometries[0];
+      if (typeof THREE.BufferGeometryUtils !== 'undefined' && THREE.BufferGeometryUtils.mergeBufferGeometries) {
+        const nonIndexed = geometries.map(g => (g.index ? g.toNonIndexed() : g.clone()));
+        const merged = THREE.BufferGeometryUtils.mergeBufferGeometries(nonIndexed, false);
+        nonIndexed.forEach(g => g.dispose());
+        return merged;
+      }
+      const nonIndexed = geometries.map(g => (g.index ? g.toNonIndexed() : g));
+      let totalPos = 0, totalNorm = 0, totalUv = 0;
+      nonIndexed.forEach(g => {
+        if (g.attributes.position) totalPos += g.attributes.position.array.length;
+        if (g.attributes.normal) totalNorm += g.attributes.normal.array.length;
+        if (g.attributes.uv) totalUv += g.attributes.uv.array.length;
+      });
+      const pos = new Float32Array(totalPos);
+      const norm = totalNorm ? new Float32Array(totalNorm) : null;
+      const uv = totalUv ? new Float32Array(totalUv) : null;
+      let pOff = 0, nOff = 0, uOff = 0;
+      nonIndexed.forEach(g => {
+        if (g.attributes.position) {
+          pos.set(g.attributes.position.array, pOff);
+          pOff += g.attributes.position.array.length;
+        }
+        if (norm && g.attributes.normal) {
+          norm.set(g.attributes.normal.array, nOff);
+          nOff += g.attributes.normal.array.length;
+        }
+        if (uv && g.attributes.uv) {
+          uv.set(g.attributes.uv.array, uOff);
+          uOff += g.attributes.uv.array.length;
+        }
+      });
+      const merged = new THREE.BufferGeometry();
+      merged.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      if (norm) merged.setAttribute('normal', new THREE.BufferAttribute(norm, 3));
+      if (uv) merged.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      return merged;
+    }
 
     let currentTimeOfDay = 'dusk';
     let currentWeather = 'clear';
@@ -1336,13 +1379,16 @@
       { x: 0.9,   z: -9.5, rx: 1.50, rz: 1.20, rot: -0.7 },
       { x: -5.5,  z: -4.8, rx: 1.40, rz: 1.15, rot: 0.5 }
     ];
+    const puddleGeos = [];
     puddleLocations.forEach(p => {
-      const pm = new THREE.Mesh(new THREE.PlaneGeometry(p.rx * 2, p.rz * 2, 1, 1), puddleMat);
-      pm.rotation.x = -Math.PI / 2;
-      pm.rotation.z = p.rot;
-      pm.position.set(p.x, 0.102, p.z);
-      scene.add(pm);
+      const pGeo = new THREE.PlaneGeometry(p.rx * 2, p.rz * 2, 1, 1);
+      const rotQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, p.rot, 'ZXY'));
+      const pMat4 = new THREE.Matrix4().compose(new THREE.Vector3(p.x, 0.102, p.z), rotQuat, new THREE.Vector3(1, 1, 1));
+      pGeo.applyMatrix4(pMat4);
+      puddleGeos.push(pGeo);
     });
+    const mergedPuddlesMesh = new THREE.Mesh(mergeBufferGeometries(puddleGeos), puddleMat);
+    scene.add(mergedPuddlesMesh);
 
     /* =======================================================================
        5. Godot-Inspired Custom GLSL Water Shader (True Depth, Caustics, Fresnel & Foam)
@@ -1673,13 +1719,15 @@
         roughness: 0.3
       });
 
+      const darkPilingGeos = [];
+      const dockWoodGeos = [];
+      const ropeGeos = [];
+
       // Under-dock support beams
       [-0.85, 0.85].forEach(offsetZ => {
-        const beam = new THREE.Mesh(new THREE.BoxGeometry(dockEndX - dockStartX + 0.3, 0.16, 0.18), darkPilingMat);
-        beam.position.set((dockStartX + dockEndX) * 0.5, 0.05, dockCenterZ + offsetZ);
-        beam.castShadow = true;
-        beam.receiveShadow = true;
-        dg.add(beam);
+        const beamGeo = new THREE.BoxGeometry(dockEndX - dockStartX + 0.3, 0.16, 0.18);
+        beamGeo.applyMatrix4(new THREE.Matrix4().makeTranslation((dockStartX + dockEndX) * 0.5, 0.05, dockCenterZ + offsetZ));
+        darkPilingGeos.push(beamGeo);
       });
 
       // 14 Timber Planks
@@ -1687,12 +1735,9 @@
       const step = (dockEndX - dockStartX) / (plankCount - 1);
       for (let i = 0; i < plankCount; i++) {
         const px = dockStartX + i * step;
-        const plank = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.08, 2.38), dockWoodMat);
-        plank.position.set(px, 0.13, dockCenterZ);
-        plank.castShadow = true;
-        plank.receiveShadow = true;
-        dg.add(plank);
-        dockPlanks.push(plank);
+        const plankGeo = new THREE.BoxGeometry(0.32, 0.08, 2.38);
+        plankGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(px, 0.13, dockCenterZ));
+        dockWoodGeos.push(plankGeo);
       }
 
       // 6 Vertical Pilings / Mooring Posts driven into the lake bed
@@ -1702,29 +1747,31 @@
         [7.8, dockCenterZ - 1.25], [7.8, dockCenterZ + 1.25],
       ];
       pilingCoords.forEach(([px, pz]) => {
-        const piling = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 1.4, 10), darkPilingMat);
-        piling.position.set(px, 0.13 + 0.25, pz);
-        piling.castShadow = true;
-        piling.receiveShadow = true;
-        dg.add(piling);
+        const pilingGeo = new THREE.CylinderGeometry(0.11, 0.13, 1.4, 8);
+        pilingGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(px, 0.13 + 0.25, pz));
+        darkPilingGeos.push(pilingGeo);
 
         // Rope coils wrapped around piling tops
-        const ropeCoil = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.035, 6, 12), ropeMat);
-        ropeCoil.rotation.x = Math.PI / 2;
-        ropeCoil.position.set(px, 0.13 + 0.72, pz);
-        dg.add(ropeCoil);
+        const ropeCoilGeo = new THREE.TorusGeometry(0.13, 0.035, 6, 12);
+        const rMat4 = new THREE.Matrix4().compose(
+          new THREE.Vector3(px, 0.13 + 0.72, pz),
+          new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0)),
+          new THREE.Vector3(1, 1, 1)
+        );
+        ropeCoilGeo.applyMatrix4(rMat4);
+        ropeGeos.push(ropeCoilGeo);
 
         // Hanging warm paper lanterns at the pier end
         if (px >= 7.6) {
-          const larm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.35), darkPilingMat);
           const armDir = pz > dockCenterZ ? -1 : 1;
-          larm.position.set(px - 0.05, 0.13 + 0.88, pz + armDir * 0.18);
-          dg.add(larm);
+          const larmGeo = new THREE.BoxGeometry(0.08, 0.08, 0.35);
+          larmGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(px - 0.05, 0.13 + 0.88, pz + armDir * 0.18));
+          darkPilingGeos.push(larmGeo);
 
           const lantern = new THREE.Group();
-          const lanternBody = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.28, 10), lanternPaperMat);
+          const lanternBody = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.28, 8), lanternPaperMat);
           lantern.add(lanternBody);
-          const cap = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.08, 10), darkPilingMat);
+          const cap = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.08, 8), darkPilingMat);
           cap.position.y = 0.17;
           lantern.add(cap);
           const halo = createGlowSprite('#f59e0b', 1.4);
@@ -1741,22 +1788,38 @@
       // Rustic wooden rope safety rails along north & south sides
       [-1.22, 1.22].forEach(rz => {
         const railLen = dockEndX - dockStartX;
-        const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, railLen, 8), ropeMat);
-        rope.rotation.z = Math.PI / 2;
-        rope.position.set((dockStartX + dockEndX) * 0.5, 0.13 + 0.52, dockCenterZ + rz);
-        dg.add(rope);
+        const ropeGeo = new THREE.CylinderGeometry(0.028, 0.028, railLen, 8);
+        const ropeMat4 = new THREE.Matrix4().compose(
+          new THREE.Vector3((dockStartX + dockEndX) * 0.5, 0.13 + 0.52, dockCenterZ + rz),
+          new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI / 2)),
+          new THREE.Vector3(1, 1, 1)
+        );
+        ropeGeo.applyMatrix4(ropeMat4);
+        ropeGeos.push(ropeGeo);
       });
 
       // Cozy pier-head wooden stool & fishing basket (箱庭感治癒小細節)
-      const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.26, 8), dockWoodMat);
-      stool.position.set(7.35, 0.13 + 0.13, dockCenterZ - 0.65);
-      stool.castShadow = true;
-      dg.add(stool);
+      const stoolGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.26, 8);
+      stoolGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(7.35, 0.13 + 0.13, dockCenterZ - 0.65));
+      dockWoodGeos.push(stoolGeo);
 
-      const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.32, 8), ropeMat);
-      basket.position.set(7.35, 0.13 + 0.16, dockCenterZ + 0.65);
-      basket.castShadow = true;
-      dg.add(basket);
+      const basketGeo = new THREE.CylinderGeometry(0.18, 0.14, 0.32, 8);
+      basketGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(7.35, 0.13 + 0.16, dockCenterZ + 0.65));
+      ropeGeos.push(basketGeo);
+
+      // Add merged batches
+      const mPlankMesh = new THREE.Mesh(mergeBufferGeometries(dockWoodGeos), dockWoodMat);
+      mPlankMesh.castShadow = true; mPlankMesh.receiveShadow = true;
+      dg.add(mPlankMesh);
+      dockPlanks.push(mPlankMesh);
+
+      const mPilingsMesh = new THREE.Mesh(mergeBufferGeometries(darkPilingGeos), darkPilingMat);
+      mPilingsMesh.castShadow = true; mPilingsMesh.receiveShadow = true;
+      dg.add(mPilingsMesh);
+
+      const mRopesMesh = new THREE.Mesh(mergeBufferGeometries(ropeGeos), ropeMat);
+      mRopesMesh.castShadow = true;
+      dg.add(mRopesMesh);
 
       scene.add(dg);
     }
@@ -1990,26 +2053,34 @@
 
       const span = 8.4;
       const steps = 20;
+      const plankGeos = [];
+      const railGeos = [];
+      const capGeos = [];
+
       for (let i = 0; i <= steps; i++) {
         const t = (i / steps) - 0.5;
         const bx = t * span;
         const by = Math.cos(t * Math.PI) * 0.92;
-        const plank = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 3.4), woodDeckMat);
-        plank.position.set(bx, by, 0);
-        plank.rotation.z = -Math.sin(t * Math.PI) * 0.26;
-        plank.castShadow = true;
-        plank.receiveShadow = true;
-        bg.add(plank);
+        const rotZ = -Math.sin(t * Math.PI) * 0.26;
+
+        const plankGeo = new THREE.BoxGeometry(0.42, 0.12, 3.4);
+        const pMat4 = new THREE.Matrix4().compose(
+          new THREE.Vector3(bx, by, 0),
+          new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, rotZ)),
+          new THREE.Vector3(1, 1, 1)
+        );
+        plankGeo.applyMatrix4(pMat4);
+        plankGeos.push(plankGeo);
 
         if (i % 4 === 0) {
           [-1.55, 1.55].forEach(rz => {
-            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.10, 1.05, 10), redRailMat);
-            post.position.set(bx, by + 0.52, rz);
-            post.castShadow = true;
-            bg.add(post);
-            const cap = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 12), goldCapMat);
-            cap.position.set(bx, by + 1.08, rz);
-            bg.add(cap);
+            const postGeo = new THREE.CylinderGeometry(0.09, 0.10, 1.05, 8);
+            postGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(bx, by + 0.52, rz));
+            railGeos.push(postGeo);
+
+            const capGeo = new THREE.SphereGeometry(0.13, 10, 10);
+            capGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(bx, by + 1.08, rz));
+            capGeos.push(capGeo);
           });
         }
       }
@@ -2022,20 +2093,40 @@
           const x1 = t1 * span, y1 = Math.cos(t1 * Math.PI) * 0.92 + 0.85;
           const x2 = t2 * span, y2 = Math.cos(t2 * Math.PI) * 0.92 + 0.85;
           const len = Math.hypot(x2 - x1, y2 - y1);
-          const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, len + 0.04, 8), redRailMat);
-          rail.position.set((x1 + x2) * 0.5, (y1 + y2) * 0.5, rz);
-          rail.rotation.z = Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2;
-          bg.add(rail);
+          const rGeo = new THREE.CylinderGeometry(0.055, 0.055, len + 0.04, 8);
+          const rotZ = Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2;
+          const rMat4 = new THREE.Matrix4().compose(
+            new THREE.Vector3((x1 + x2) * 0.5, (y1 + y2) * 0.5, rz),
+            new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, rotZ)),
+            new THREE.Vector3(1, 1, 1)
+          );
+          rGeo.applyMatrix4(rMat4);
+          railGeos.push(rGeo);
         }
       });
 
       // Bridge stone abutments at both ends
+      const abutGeos = [];
       [-span * 0.5, span * 0.5].forEach(ex => {
-        const abut = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 3.8), trimStoneMat);
-        abut.position.set(ex, 0.15, 0);
-        abut.receiveShadow = true;
-        bg.add(abut);
+        const abutGeo = new THREE.BoxGeometry(0.9, 0.45, 3.8);
+        abutGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(ex, 0.15, 0));
+        abutGeos.push(abutGeo);
       });
+
+      const mPlankMesh = new THREE.Mesh(mergeBufferGeometries(plankGeos), woodDeckMat);
+      mPlankMesh.castShadow = true; mPlankMesh.receiveShadow = true;
+      bg.add(mPlankMesh);
+
+      const mRailMesh = new THREE.Mesh(mergeBufferGeometries(railGeos), redRailMat);
+      mRailMesh.castShadow = true;
+      bg.add(mRailMesh);
+
+      const mCapMesh = new THREE.Mesh(mergeBufferGeometries(capGeos), goldCapMat);
+      bg.add(mCapMesh);
+
+      const mAbutMesh = new THREE.Mesh(mergeBufferGeometries(abutGeos), trimStoneMat);
+      mAbutMesh.receiveShadow = true;
+      bg.add(mAbutMesh);
 
       bg.position.set(x, 0.06, z);
       scene.add(bg);
@@ -2088,15 +2179,22 @@
     const treeCanopies = [];
     const occludableObjects = [];
 
-    // Helper to build a curved organic branch segment
-    function addBranchSegment(parent, x1, y1, z1, x2, y2, z2, rBottom, rTop, customMat = null) {
+    // Helper to build a curved organic branch segment geometry
+    function makeBranchGeo(x1, y1, z1, x2, y2, z2, rBottom, rTop) {
       const dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
       const len = Math.hypot(dx, dy, dz);
-      const geo = new THREE.CylinderGeometry(rTop, rBottom, len, 10);
-      const mesh = new THREE.Mesh(geo, customMat || trunkPBRMat);
-      mesh.position.set((x1 + x2) * 0.5, (y1 + y2) * 0.5, (z1 + z2) * 0.5);
+      const geo = new THREE.CylinderGeometry(rTop, rBottom, len, 8);
+      const pos = new THREE.Vector3((x1 + x2) * 0.5, (y1 + y2) * 0.5, (z1 + z2) * 0.5);
       const dir = new THREE.Vector3(dx, dy, dz).normalize();
-      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      const mat4 = new THREE.Matrix4().compose(pos, quat, new THREE.Vector3(1, 1, 1));
+      geo.applyMatrix4(mat4);
+      return geo;
+    }
+
+    function addBranchSegment(parent, x1, y1, z1, x2, y2, z2, rBottom, rTop, customMat = null) {
+      const geo = makeBranchGeo(x1, y1, z1, x2, y2, z2, rBottom, rTop);
+      const mesh = new THREE.Mesh(geo, customMat || trunkPBRMat);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       parent.add(mesh);
@@ -2124,20 +2222,21 @@
       matCoolShade.emissive.setHex(0x4c0519);
       matCoolShade.emissiveIntensity = 0.06;
 
+      const trunkGeos = [];
+
       // 1. Flared organic root buttresses (5 roots gripping the ground)
       for (let r = 0; r < 5; r++) {
         const ra = (r / 5) * Math.PI * 2 + 0.2;
-        addBranchSegment(
-          group,
+        trunkGeos.push(makeBranchGeo(
           Math.cos(ra) * 0.72, 0.02, Math.sin(ra) * 0.72,
           Math.cos(ra) * 0.22, 0.75, Math.sin(ra) * 0.22,
-          0.18, 0.26, myTrunkMat
-        );
+          0.18, 0.26
+        ));
       }
 
       // 2. Gnarled lower & mid trunk with organic lean
-      addBranchSegment(group, 0, 0.1, 0, 0.12, 1.65, -0.08, 0.52, 0.38, myTrunkMat);
-      addBranchSegment(group, 0.12, 1.55, -0.08, -0.05, 2.95, 0.06, 0.38, 0.26, myTrunkMat);
+      trunkGeos.push(makeBranchGeo(0, 0.1, 0, 0.12, 1.65, -0.08, 0.52, 0.38));
+      trunkGeos.push(makeBranchGeo(0.12, 1.55, -0.08, -0.05, 2.95, 0.06, 0.38, 0.26));
 
       // 3. Primary & Secondary Forked Limbs reaching into canopy
       const limbEndpoints = [
@@ -2148,12 +2247,11 @@
         { s: [-0.05, 2.95, 0.06], m: [0.05, 4.15, 0.12],  e: [0.10, 5.15, 0.20] }
       ];
 
-      const canopyGroup = new THREE.Group();
-      const clusterPlaneGeo = new THREE.PlaneGeometry(2.15, 2.15);
+      const crownGeos = [], midGeos = [], coolGeos = [];
 
       limbEndpoints.forEach((limb, lIdx) => {
-        addBranchSegment(group, limb.s[0], limb.s[1], limb.s[2], limb.m[0], limb.m[1], limb.m[2], 0.22, 0.14, myTrunkMat);
-        addBranchSegment(group, limb.m[0], limb.m[1], limb.m[2], limb.e[0], limb.e[1], limb.e[2], 0.14, 0.07, myTrunkMat);
+        trunkGeos.push(makeBranchGeo(limb.s[0], limb.s[1], limb.s[2], limb.m[0], limb.m[1], limb.m[2], 0.22, 0.14));
+        trunkGeos.push(makeBranchGeo(limb.m[0], limb.m[1], limb.m[2], limb.e[0], limb.e[1], limb.e[2], 0.14, 0.07));
 
         // Dense 3D Crossed Botanical Blossoms along both mid-branch and branch tip
         [limb.m, limb.e].forEach((pt, pIdx) => {
@@ -2167,26 +2265,49 @@
 
             // Directional sun-axis score: upper & sun-facing (+X/+Z) gets warm golden crown, lower/back gets cool shade
             const sunScore = cx * 0.45 + (cy - 3.8) * 0.85 + cz * 0.35;
-            const tierMat = sunScore > 0.55 ? matSunCrown : (sunScore < -0.25 ? matCoolShade : matMidCanopy);
+            const targetArray = sunScore > 0.55 ? crownGeos : (sunScore < -0.25 ? coolGeos : midGeos);
 
-            // 3 intersecting planes per bouquet so it has full 3D volume from every camera zoom/orbit angle!
             for (let planeIdx = 0; planeIdx < 3; planeIdx++) {
-              const card = new THREE.Mesh(clusterPlaneGeo, tierMat);
-              card.customDepthMaterial = sakuraDepthMat;
-              card.position.set(cx, cy, cz);
-              card.rotation.set(
+              const cardGeo = new THREE.PlaneGeometry(2.15, 2.15);
+              const cardEuler = new THREE.Euler(
                 (Math.sin(c + planeIdx) * 0.45),
                 (planeIdx * Math.PI) / 3 + c * 0.7,
                 (Math.cos(c - planeIdx) * 0.35)
               );
+              const cardQuat = new THREE.Quaternion().setFromEuler(cardEuler);
               const sc = 0.78 + ((c + lIdx) % 3) * 0.18;
-              card.scale.set(sc, sc, sc);
-              card.castShadow = true;
-              canopyGroup.add(card);
+              const cardMat4 = new THREE.Matrix4().compose(new THREE.Vector3(cx, cy, cz), cardQuat, new THREE.Vector3(sc, sc, sc));
+              cardGeo.applyMatrix4(cardMat4);
+              targetArray.push(cardGeo);
             }
           }
         });
       });
+
+      const trunkMesh = new THREE.Mesh(mergeBufferGeometries(trunkGeos), myTrunkMat);
+      trunkMesh.castShadow = true;
+      trunkMesh.receiveShadow = true;
+      group.add(trunkMesh);
+
+      const canopyGroup = new THREE.Group();
+      if (crownGeos.length) {
+        const mCrown = new THREE.Mesh(mergeBufferGeometries(crownGeos), matSunCrown);
+        mCrown.customDepthMaterial = sakuraDepthMat;
+        mCrown.castShadow = true;
+        canopyGroup.add(mCrown);
+      }
+      if (midGeos.length) {
+        const mMid = new THREE.Mesh(mergeBufferGeometries(midGeos), matMidCanopy);
+        mMid.customDepthMaterial = sakuraDepthMat;
+        mMid.castShadow = true;
+        canopyGroup.add(mMid);
+      }
+      if (coolGeos.length) {
+        const mCool = new THREE.Mesh(mergeBufferGeometries(coolGeos), matCoolShade);
+        mCool.customDepthMaterial = sakuraDepthMat;
+        mCool.castShadow = true;
+        canopyGroup.add(mCool);
+      }
 
       group.add(canopyGroup);
       treeCanopies.push({ mesh: canopyGroup, phase: x * 0.3 + z * 0.5 });
@@ -2218,7 +2339,10 @@
       const pineLowMat = pineFoliageMat.clone();
       pineLowMat.color.setHex(0x064e3b);
 
-      addBranchSegment(group, 0, 0, 0, 0, 4.2, 0, 0.42, 0.12, myTrunkMat);
+      const trunkMesh = new THREE.Mesh(makeBranchGeo(0, 0, 0, 0, 4.2, 0, 0.42, 0.12), myTrunkMat);
+      trunkMesh.castShadow = true;
+      trunkMesh.receiveShadow = true;
+      group.add(trunkMesh);
 
       const canopyGroup = new THREE.Group();
       const tiers = [
@@ -2228,7 +2352,8 @@
         { y: 4.1, r: 0.85, cards: 5 },
         { y: 4.65, r: 0.45, cards: 4 }
       ];
-      const pineCardGeo = new THREE.PlaneGeometry(1.75, 1.55);
+
+      const topGeos = [], midGeos = [], lowGeos = [];
 
       tiers.forEach((t, tIdx) => {
         for (let i = 0; i < t.cards; i++) {
@@ -2236,17 +2361,35 @@
           const px = Math.cos(a) * (t.r * 0.55);
           const pz = Math.sin(a) * (t.r * 0.55);
           const sunScore = px * 0.5 + (tIdx - 1.8) * 0.55 + pz * 0.35;
-          const pMat = sunScore > 0.45 ? pineTopMat : (sunScore < -0.25 ? pineLowMat : pineMidMat);
-          const card = new THREE.Mesh(pineCardGeo, pMat);
-          card.customDepthMaterial = pineDepthMat;
-          card.position.set(px, t.y, pz);
-          card.rotation.order = 'YXZ';
-          card.rotation.y = -a + Math.PI / 2;
-          card.rotation.x = 0.62; // Drooping layered pine boughs
-          card.castShadow = true;
-          canopyGroup.add(card);
+          const targetArray = sunScore > 0.45 ? topGeos : (sunScore < -0.25 ? lowGeos : midGeos);
+
+          const cardGeo = new THREE.PlaneGeometry(1.75, 1.55);
+          const cardEuler = new THREE.Euler(0.62, -a + Math.PI / 2, 0, 'YXZ');
+          const cardQuat = new THREE.Quaternion().setFromEuler(cardEuler);
+          const cardMat4 = new THREE.Matrix4().compose(new THREE.Vector3(px, t.y, pz), cardQuat, new THREE.Vector3(1, 1, 1));
+          cardGeo.applyMatrix4(cardMat4);
+          targetArray.push(cardGeo);
         }
       });
+
+      if (topGeos.length) {
+        const mMesh = new THREE.Mesh(mergeBufferGeometries(topGeos), pineTopMat);
+        mMesh.customDepthMaterial = pineDepthMat;
+        mMesh.castShadow = true;
+        canopyGroup.add(mMesh);
+      }
+      if (midGeos.length) {
+        const mMesh = new THREE.Mesh(mergeBufferGeometries(midGeos), pineMidMat);
+        mMesh.customDepthMaterial = pineDepthMat;
+        mMesh.castShadow = true;
+        canopyGroup.add(mMesh);
+      }
+      if (lowGeos.length) {
+        const mMesh = new THREE.Mesh(mergeBufferGeometries(lowGeos), pineLowMat);
+        mMesh.customDepthMaterial = pineDepthMat;
+        mMesh.castShadow = true;
+        canopyGroup.add(mMesh);
+      }
 
       group.add(canopyGroup);
       treeCanopies.push({ mesh: canopyGroup, phase: x * 0.5 - z * 0.3 });
