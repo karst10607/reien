@@ -3,8 +3,8 @@
 > 一個重現《仙境傳說 RO》與《動物森友會》溫暖治癒風格的 2.5D 偽 3D 線上靈園、虛擬追思園與自建庭園小鎮。  
 > 具備免安裝瀏覽器秒開、點擊走動、聖壇獻花點燈、親友追思信箱、以及完整的**自由建造庭園小鎮系統**。
 
-[![Release](https://img.shields.io/badge/Release-v1.3.1-6366f1?style=for-the-badge&logo=github)](CHANGELOG.md)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-13%20Tests%20Passing-emerald?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/ci-deploy.yml)
+[![Release](https://img.shields.io/badge/Release-v1.4.3-6366f1?style=for-the-badge&logo=github)](CHANGELOG.md)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-15%20Tests%20Passing-emerald?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/ci-deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-%E7%8F%BE%E5%9C%A8%E5%85%8D%E5%AE%89%E8%A3%9D%E5%85%A5%E5%9C%92%E5%8F%83%E8%A8%AA-10b981?style=for-the-badge&logo=googlechrome&logoColor=white)](https://karst10607.github.io/reien/)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Online-blue?style=for-the-badge)](https://karst10607.github.io/reien/)
 
@@ -122,7 +122,7 @@ python3 tools/bake_textures.py
 
 ## 🧪 自動化測試與 CI/CD 流水線 (Automated E2E Test Suite & GitHub Actions)
 
-本專案內建零外部套件依賴的 **Chrome DevTools Protocol (CDP) 端到端自動化測試套件**（`tests/e2e_ci_suite.py`）與 **GitHub Actions CI/CD 自動檢測發佈工作流**（`.github/workflows/ci-deploy.yml`）。每次 Push 或 PR 皆會自動執行以下 **10 項自動化測試案例（TC-01 ~ TC-10）**，全部通過後才自動部署至 GitHub Pages：
+本專案內建零外部套件依賴的 **Chrome DevTools Protocol (CDP) 端到端自動化測試套件**（`tests/e2e_ci_suite.py`）與 **GitHub Actions CI/CD 自動檢測發佈工作流**（`.github/workflows/ci-deploy.yml`）。每次 Push 或 PR 皆會自動執行以下 **15 項自動化測試案例（TC-01 ~ TC-15）**，全部通過後才自動部署至 GitHub Pages：
 
 | 測試編號 | 測試項目 | 自動化驗證內容 |
 | :--- | :--- | :--- |
@@ -138,10 +138,17 @@ python3 tools/bake_textures.py
 | **TC-10** | 造鎮建造模式切換與聖壇獻花點燈互動 | 驗證建造模式開關狀態切換、聖壇追思面板開啟與點燃祈福燭光計數器遞增 |
 | **TC-11** | 手機直立手遊風格沉浸式頂部選單收合測試 | 驗證手機直立模式下 `#btn-top-hud-toggle` 摺疊頂部面板至 `< 50px`，解鎖 95% 全螢幕無遮擋視角與還原展開 |
 | **TC-12** | 藍牙與有線手把雙馬達震動 (Dual-Rumble) 檢測 | 模擬藍牙/有線 Xbox/DualSense 手把連線，驗證 `vibrationActuator.playEffect('dual-rumble')` 與診斷橫幅正常驅動 |
+| **TC-13** | 渲染效能守門 (TBT / FCP / FPS / 1% Low) | 以 Navigation Timing + Long Tasks + Render Stats 驗證啟動 TBT、首屏時間、5 秒平均 FPS 與 1% Low；硬體路徑要求 app TBT < 500ms、平均 ≥ 8 FPS |
+| **TC-14** | 手把多馬達診斷模式與報告匯出 | 驗證 heavy／light／trigger 三段馬達參數與 `copyGamepadDiagReport()` 可用 |
+| **TC-15** | 錦鯉池、湖光木棧道與餵魚互動 | 驗證 `koi-lake-town` 主題、木棧道高度、≥8 種錦鯉、撒餌後魚食生成與守護犬反應 |
 
-### 在本機執行完整 CI 測試套件 (12 項案例)：
+### 在本機執行完整 CI 測試套件 (15 項案例)：
 ```bash
+# CI 預設：SwiftShader 軟體渲染（與 GitHub Actions 一致）
 python tests/e2e_ci_suite.py
+
+# 本機有 GPU 時：啟用硬體加速，TC-13 會套用真正的 500ms TBT / ≥8 FPS 門檻
+REIEN_TEST_GPU=1 python tests/e2e_ci_suite.py
 ```
 
 ---

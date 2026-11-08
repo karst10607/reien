@@ -4,6 +4,73 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>線上靈園 · 湖光彼岸 ‧ 雲端紀念花園 (Reien Memorial Garden)</title>
+  <script>
+    // Lightweight startup performance instrumentation for the E2E gate (TC-13).
+    // Registered before any heavy script so long tasks and FCP are captured.
+    (() => {
+      const perf = window.__REIEN_PERF__ = {
+        longTasks: [], longTaskCount: 0, tbt: 0, maxLongTask: 0,
+        firstPaint: null, fcp: null, dcl: null, load: null, nav: null
+      };
+      try {
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.duration >= 50) {
+              perf.longTaskCount++;
+              perf.tbt += entry.duration - 50;
+              if (entry.duration > perf.maxLongTask) perf.maxLongTask = entry.duration;
+              perf.longTasks.push({ start: entry.startTime, duration: entry.duration });
+              if (perf.longTasks.length > 100) perf.longTasks.shift();
+            }
+          }
+        }).observe({ type: 'longtask', buffered: true });
+      } catch (e) { perf.longTaskObserverError = String(e); }
+      try {
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.name === 'first-paint') {
+              perf.firstPaint = entry.startTime;
+              if (perf.startup && perf.startup.firstPaint === null) perf.startup.firstPaint = entry.startTime;
+            }
+            if (entry.name === 'first-contentful-paint') {
+              perf.fcp = entry.startTime;
+              if (perf.startup && perf.startup.fcp === null) perf.startup.fcp = entry.startTime;
+            }
+          }
+        }).observe({ type: 'paint', buffered: true });
+      } catch (e) { perf.paintObserverError = String(e); }
+      document.addEventListener('DOMContentLoaded', () => { perf.dcl = performance.now(); });
+      window.addEventListener('load', () => {
+        perf.load = performance.now();
+        const paint = performance.getEntriesByType('paint');
+        for (const entry of paint) {
+          if (entry.name === 'first-paint' && perf.firstPaint === null) perf.firstPaint = entry.startTime;
+          if (entry.name === 'first-contentful-paint' && perf.fcp === null) perf.fcp = entry.startTime;
+        }
+        const nav = performance.getEntriesByType('navigation')[0];
+        if (nav) {
+          perf.nav = {
+            responseStart: nav.responseStart,
+            domInteractive: nav.domInteractive,
+            domContentLoaded: nav.domContentLoadedEventEnd,
+            loadEventEnd: nav.loadEventEnd
+          };
+        }
+        // Freeze the startup window before later quality toggles compile extra
+        // shader programs (especially under SwiftShader).
+        perf.startup = {
+          firstPaint: perf.firstPaint,
+          fcp: perf.fcp,
+          dcl: perf.dcl,
+          load: perf.load,
+          nav: perf.nav,
+          longTasks: perf.longTasks.slice(),
+          longTaskCount: perf.longTaskCount,
+          maxLongTask: perf.maxLongTask
+        };
+      });
+    })();
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
@@ -378,7 +445,7 @@
       <div class="brand-card">
         <span class="brand-icon">🕊️</span>
         <div>
-          <div class="brand-title">線上靈園 ‧ 湖光彼岸紀念庭園 <span class="version-badge">v1.4.2</span></div>
+          <div class="brand-title">線上靈園 ‧ 湖光彼岸紀念庭園 <span class="version-badge">v1.4.3</span></div>
           <div class="brand-subtitle">
             <span class="online-indicator"></span>
             <span id="sync-status">線上靈園 ‧ 湖畔步道與水波錦鯉 ‧ 自由漫遊</span>

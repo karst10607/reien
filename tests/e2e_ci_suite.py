@@ -3,7 +3,7 @@
 Zero-Dependency Automated End-to-End (E2E) & Static Verification Test Suite
 for Reien 2.5D Cloud Memorial Garden & Town Builder (Chrome DevTools Protocol).
 
-Covers 12 Comprehensive Test Cases:
+Covers 15 Comprehensive Test Cases:
   TC-01: Static HTML & Inline JS Syntax Check (via node --check)
   TC-02: Zero Runtime & WebGL Scene Boot Verification
   TC-03: Mobile Portrait (390x844) Layout, Non-Obstruction & Virtual Joystick Check
@@ -16,6 +16,9 @@ Covers 12 Comprehensive Test Cases:
   TC-10: Town Builder Mode & Memorial Shrine Modal Offerings
   TC-11: Mobile Portrait Top UI Collapse / Immersive Mode (手遊風格沉浸式收合頂部選單)
   TC-12: Bluetooth & Wired Gamepad Actuator Dual-Rumble Test
+  TC-13: Startup TBT / Navigation Timing / Render FPS & 1% Low Performance Gate
+  TC-14: Multi-Motor Diagnostic Modes ('heavy', 'light', 'trigger') & Report Export
+  TC-15: Koi Pond, Lakeside Dock & Interactive Fish Feeding
 """
 import argparse
 import base64
@@ -234,8 +237,122 @@ def capture_png(ws, out_path: str):
 
 
 # =====================================================================
-# Test Cases (TC-01 to TC-10)
+# Test Cases (TC-01 to TC-15)
 # =====================================================================
+def test_tc13_performance_and_fps(ws, screenshot_dir=None):
+    """TC-13: startup TBT / Navigation Timing / render FPS / 1% low gate.
+
+    Uses the frozen __REIEN_PERF__.startup snapshot taken at the load event so
+    later quality toggles cannot pollute the startup measurement.
+    """
+    print("[TC-13] Render Performance: TBT, Navigation Timing & 1% Low FPS...", end=" ", flush=True)
+
+    perf = None
+    for _ in range(80):
+        try:
+            perf = eval_js(ws, "return window.__REIEN_PERF__ || null;", timeout=3)
+        except Exception:
+            perf = None
+        if perf and perf.get('startup'):
+            break
+        time.sleep(0.25)
+    assert_true(isinstance(perf, dict), "window.__REIEN_PERF__ did not initialize")
+    startup = perf.get('startup')
+    assert_true(isinstance(startup, dict), f"Startup performance snapshot missing: {perf}")
+
+    diag = eval_js(ws, "return window.__REIEN_DIAG__.getState();", timeout=5)
+    software = bool(diag.get('softwareRenderer'))
+    live_fcp = eval_js(ws, """
+        const p = performance.getEntriesByType('paint').find(e => e.name === 'first-contentful-paint');
+        return p ? p.startTime : (window.__REIEN_PERF__.fcp || 0);
+    """, timeout=5)
+    fcp = startup.get('fcp') or perf.get('fcp') or live_fcp or startup.get('firstPaint') or 0.0
+    tasks = startup.get('longTasks') or []
+
+    def overage_after_fcp(task, since):
+        end = task.get('start', 0) + task.get('duration', 0)
+        return max(0.0, end - max(task.get('start', 0), since) - 50.0)
+
+    tbt_all = sum(max(0.0, t.get('duration', 0) - 50.0) for t in tasks)
+    tbt_after_fcp = sum(overage_after_fcp(t, fcp) for t in tasks)
+
+    # First-render GLSL compilation is a single large driver/GPU task (SwiftShader
+    # is extreme: several seconds; hardware is also 1-3s on some iGPUs). Exempt
+    # exactly one task — the largest — from the application TBT budget, then
+    # still enforce the 500 ms app gate on every remaining long task.
+    compile_task = max(tasks, key=lambda t: t.get('duration', 0)) if tasks else None
+    compile_ms = compile_task.get('duration', 0) if compile_task else 0
+    tbt_app = sum(
+        overage_after_fcp(t, fcp) for t in tasks if t is not compile_task
+    )
+
+    nav = startup.get('nav') or {}
+    assert_true(fcp > 0, f"First Contentful Paint was not observed: {startup}")
+    assert_true(nav.get('responseStart') is not None, f"Navigation Timing API unavailable: {nav}")
+
+    # Sanity cap on total startup blocking (dominated by GPU shader compilation).
+    assert_true(tbt_after_fcp < (30000.0 if software else 8000.0),
+                f"Startup blocking too high ({'software' if software else 'hardware'}): {tbt_after_fcp:.0f}ms")
+    assert_true(tbt_app < 500.0,
+                f"Application TBT excluding one GPU shader-compile task is {tbt_app:.0f}ms (>= 500ms)")
+
+    # Quality profile contract + localStorage persistence (issue #9).
+    low = eval_js(ws, """
+        window.__REIEN_DIAG__.setQuality('performance');
+        const s = window.__REIEN_DIAG__.getState();
+        return { mode: s.qualityMode, shadow: s.shadowEnabled, cast: s.mainCastShadow,
+                 dpr: s.pixelRatio, cap: s.frameCapFps, stored: s.qualityPersisted,
+                 composer: s.hasComposer };
+    """, timeout=8)
+    assert_true(low['mode'] == 'performance' and low['shadow'] is False and low['cast'] is False,
+                f"Low quality profile mismatch: {low}")
+    assert_true(low['cap'] == 30, f"Expected 30 FPS gate, got {low['cap']}")
+    assert_true(low['dpr'] <= 1.01, f"Desktop low-quality DPR should be <= 1.0, got {low['dpr']}")
+    assert_true(low['stored'] == 'performance', f"Low profile not persisted: {low}")
+    assert_true(low['composer'] is False, "Bloom composer must be off in low quality")
+
+    high = eval_js(ws, """
+        window.__REIEN_DIAG__.setQuality('quality');
+        const s = window.__REIEN_DIAG__.getState();
+        return { mode: s.qualityMode, shadow: s.shadowEnabled, cast: s.mainCastShadow,
+                 dpr: s.pixelRatio, cap: s.frameCapFps, stored: s.qualityPersisted,
+                 composer: s.hasComposer };
+    """, timeout=12)
+    assert_true(high['mode'] == 'quality' and high['shadow'] is True and high['cast'] is True,
+                f"High quality profile mismatch: {high}")
+    assert_true(high['cap'] == 60, f"Expected 60 FPS gate, got {high['cap']}")
+    assert_true(high['dpr'] <= 1.71, f"Desktop high-quality DPR should be <= 1.7, got {high['dpr']}")
+    assert_true(high['stored'] == 'quality', f"High profile not persisted: {high}")
+    assert_true(high['composer'] is True, "Bloom composer should be active in high quality")
+
+    # Sample real rendered frames (skipped rAF ticks excluded by the gate) for 5s.
+    eval_js(ws, "window.__REIEN_DIAG__.setQuality('performance'); window.__REIEN_DIAG__.resetRenderStats();",
+            timeout=8)
+    time.sleep(5.0)
+    stats = eval_js(ws, "return window.__REIEN_DIAG__.getRenderStats();", timeout=5)
+    if software:
+        # SwiftShader renders this 1,069-object scene at roughly 1 FPS. Gate on
+        # liveness (the loop still produces frames) rather than an FPS number
+        # that is meaningless for a software rasterizer.
+        assert_true(stats['frames'] >= 2, f"Render loop stalled under software rasterizer: {stats}")
+        assert_true(stats['avgFps'] > 0, f"Render loop produced no frame interval: {stats}")
+    else:
+        assert_true(stats['frames'] >= 30, f"Too few rendered frames in 5s: {stats}")
+        assert_true(stats['avgFps'] >= 8.0, f"Average render FPS too low: {stats}")
+        assert_true(stats['low1Fps'] >= 4.0, f"1% low FPS too low (stall detected): {stats}")
+        assert_true(stats['low1Fps'] >= stats['avgFps'] * 0.30,
+                    f"Frame pacing unstable (1% low {stats['low1Fps']:.1f} vs avg {stats['avgFps']:.1f}): {stats}")
+
+    if screenshot_dir:
+        time.sleep(0.4)
+        capture_png(ws, os.path.join(screenshot_dir, "performance_profile_30fps.png"))
+
+    env_note = "SW" if software else "GPU"
+    print(f"(FCP {fcp:.0f}ms, app TBT {tbt_app:.0f}ms / total {tbt_after_fcp:.0f}ms "
+          f"(all {tbt_all:.0f}ms, GPU compile {compile_ms:.0f}ms excluded), "
+          f"avg {stats['avgFps']:.1f} FPS, 1% low {stats['low1Fps']:.1f} FPS, {env_note}) PASS")
+
+
 def run_tc01_static_syntax():
     print("[TC-01] Static HTML & Inline JS Syntax Integrity...", end=" ", flush=True)
     assert_true(os.path.isfile(INDEX_HTML), f"index.html not found at {INDEX_HTML}")
@@ -287,14 +404,19 @@ def run_browser_suite(screenshot_dir: str = None):
         "--disable-renderer-backgrounding",
     ]
     if sys.platform.startswith("linux"):
-        cmd.extend([
-            "--no-sandbox",
-            "--disable-gpu-sandbox",
-            "--use-gl=angle",
-            "--use-angle=swiftshader",
-            "--ignore-gpu-blocklist",
-            "--enable-unsafe-swiftshader"
-        ])
+        cmd.extend(["--no-sandbox", "--disable-gpu-sandbox"])
+        if os.environ.get("REIEN_TEST_GPU") == "1":
+            # Local hardware-accelerated run (TC-13 then enforces the real
+            # 500 ms TBT / ≥8 FPS gates instead of software-renderer liveness).
+            cmd.extend(["--use-angle=gl", "--ignore-gpu-blocklist", "--enable-gpu"])
+        else:
+            # CI default: deterministic software rasterizer, no GPU required.
+            cmd.extend([
+                "--use-gl=angle",
+                "--use-angle=swiftshader",
+                "--ignore-gpu-blocklist",
+                "--enable-unsafe-swiftshader"
+            ])
     cmd.append(url)
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -679,9 +801,14 @@ def run_browser_suite(screenshot_dir: str = None):
         print("PASS")
 
         # -----------------------------------------------------------------
-        # TC-13: Multi-Motor Diagnostic Modes ('heavy', 'light', 'trigger') & Report Export
+        # TC-13: Render Performance — TBT, Navigation Timing, FPS & 1% Low
         # -----------------------------------------------------------------
-        print("[TC-13] Multi-Motor Modes ('heavy', 'light', 'trigger') & Diag Export...", end=" ", flush=True)
+        test_tc13_performance_and_fps(ws, screenshot_dir)
+
+        # -----------------------------------------------------------------
+        # TC-14: Multi-Motor Diagnostic Modes ('heavy', 'light', 'trigger') & Report Export
+        # -----------------------------------------------------------------
+        print("[TC-14] Multi-Motor Modes ('heavy', 'light', 'trigger') & Diag Export...", end=" ", flush=True)
         modes_res = eval_js(ws, """
             window.__modeCalls = [];
             navigator.getGamepads = () => [{
@@ -717,9 +844,9 @@ def run_browser_suite(screenshot_dir: str = None):
         print("PASS")
 
         # -----------------------------------------------------------------
-        # TC-14: Koi Pond, Lakeside Dock & Interactive Fish Feeding (湖光小鎮風格驗證)
+        # TC-15: Koi Pond, Lakeside Dock & Interactive Fish Feeding (湖光小鎮風格驗證)
         # -----------------------------------------------------------------
-        print("[TC-14] Koi Pond, Lakeside Dock & Interactive Fish Feeding...", end=" ", flush=True)
+        print("[TC-15] Koi Pond, Lakeside Dock & Interactive Fish Feeding...", end=" ", flush=True)
         koi_res = eval_js(ws, """
             window.__REIEN_DIAG__.teleportPlayer(5.2, -3.0);
             const stateBefore = window.__REIEN_DIAG__.getState();
@@ -770,13 +897,13 @@ def main():
 
     start_t = time.time()
     print("=" * 70)
-    print("🚀 Starting Reien 2.5D Cloud Memorial Garden CI/CD Test Suite (14 Cases)")
+    print("🚀 Starting Reien 2.5D Cloud Memorial Garden CI/CD Test Suite (15 Cases)")
     print("=" * 70)
     run_tc01_static_syntax()
     run_browser_suite(screenshot_dir=args.screenshots)
     elapsed = time.time() - start_t
     print("=" * 70)
-    print(f"✅ ALL 14 CI/CD TEST CASES PASSED IN {elapsed:.2f}s!")
+    print(f"✅ ALL 15 CI/CD TEST CASES PASSED IN {elapsed:.2f}s!")
     print("=" * 70)
 
 
