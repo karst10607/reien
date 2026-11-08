@@ -5,6 +5,21 @@
 
 ---
 
+## [1.4.3] - 2026-11-08
+
+### 🧪 測試與 CI (Testing)
+* **E2E 擴充至 15 項，新增 TC-13 渲染效能守門 (#10)**：
+  * `index.html` 頭部新增 `window.__REIEN_PERF__` 輕量觀測器，於任何 heavy script 之前註冊 Long Tasks、Paint（FCP）、Navigation Timing，並在 `load` 時凍結啟動快照。
+  * `test_tc13_performance_and_fps()` 驗證：FCP、Navigation Timing、啟動 TBT（單一 GPU shader 編譯任務除外，其餘 app 長任務須 < 500ms）、5 秒平均 FPS、1% Low FPS 與畫質 profile／localStorage 契約。
+  * 硬體 GPU 模式（`REIEN_TEST_GPU=1`）套用 app TBT < 500ms、平均 ≥ 8 FPS、1% Low ≥ 4 FPS；CI SwiftShader 模式改以渲染迴圈存活 + 非 shader 長任務 < 500ms 守門。
+  * 原 TC-13／14 順延為 TC-14（多馬達診斷）與 TC-15（錦鯉池餵食）；README、GitHub Actions 名稱同步更新至 15 項。
+* **驗證**：
+  * `REIEN_TEST_GPU=1 python3 tests/e2e_ci_suite.py` → **15/15 PASS**（13.45s，AMD Vega 8）
+    * TC-13：FCP 3736ms、app TBT 0ms、平均 12.6 FPS、1% Low 8.6 FPS
+  * `python3 tests/e2e_ci_suite.py`（SwiftShader）→ **15/15 PASS**（42.26s）
+
+---
+
 ## [1.4.2] - 2026-11-08
 
 ### ✨ 新增功能 (Added)
