@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>星塵彼岸 ‧ 2.5D 線上靈園 & 庭園小鎮 (Next-Gen PBR & GLSL Shader Edition)</title>
+  <title>集集王 · 湖光小鎮 ‧ 星塵彼岸 (Koi Lake & Leaf Edition)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
@@ -16,7 +16,7 @@
     body, html {
       width: 100%; height: 100%; overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
-      background-color: #080c16;
+      background-color: #0f172a;
     }
     #canvas-container { width: 100%; height: 100%; position: absolute; left: 0; top: 0; z-index: 1; touch-action: none; }
     #lightning-overlay {
@@ -30,90 +30,90 @@
     }
     .top-bar { display: flex; justify-content: space-between; align-items: flex-start; pointer-events: auto; gap: 12px; }
     .brand-card {
-      background: rgba(12, 18, 32, 0.82); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      background: rgba(255, 253, 248, 0.90); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
       border-radius: 20px; padding: 11px 18px;
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), 0 0 1px rgba(255, 255, 255, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.14); display: flex; align-items: center; gap: 13px;
+      box-shadow: 0 12px 32px rgba(90, 75, 55, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(226, 218, 203, 0.85); display: flex; align-items: center; gap: 13px;
     }
     .brand-icon {
-      font-size: 26px; background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #f472b6 100%);
-      padding: 8px 10px; border-radius: 14px; display: inline-block; box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
+      font-size: 26px; background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #f59e0b 100%);
+      padding: 8px 10px; border-radius: 14px; display: inline-block; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
     }
-    .brand-title { font-size: 16px; font-weight: 700; color: #f8fafc; letter-spacing: 0.5px; }
+    .brand-title { font-size: 16px; font-weight: 700; color: #0f172a; letter-spacing: 0.5px; }
     .version-badge {
-      font-size: 10px; background: rgba(56, 189, 248, 0.22); color: #7dd3fc;
-      border: 1px solid rgba(56, 189, 248, 0.45); padding: 1px 6px; border-radius: 999px;
+      font-size: 10px; background: rgba(16, 185, 129, 0.15); color: #047857;
+      border: 1px solid rgba(16, 185, 129, 0.45); padding: 1px 6px; border-radius: 999px;
       font-weight: 700; margin-left: 6px; vertical-align: middle; display: inline-block;
     }
-    .brand-subtitle { font-size: 11.5px; color: #94a3b8; margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+    .brand-subtitle { font-size: 11.5px; color: #64748b; margin-top: 2px; display: flex; align-items: center; gap: 6px; }
     .online-indicator {
-      width: 8px; height: 8px; background: #34d399; border-radius: 50%; display: inline-block;
-      box-shadow: 0 0 10px #34d399; animation: pulse-dot 2s infinite;
+      width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block;
+      box-shadow: 0 0 10px #10b981; animation: pulse-dot 2s infinite;
     }
     @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.9); } }
     .top-controls { display: flex; flex-direction: column; gap: 7px; align-items: flex-end; }
     .control-row { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
     .pill-group {
-      background: rgba(12, 18, 32, 0.82); backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 13px; padding: 3.5px;
-      display: flex; gap: 3px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+      background: rgba(255, 253, 248, 0.90); backdrop-filter: blur(14px);
+      border: 1px solid rgba(226, 218, 203, 0.85); border-radius: 13px; padding: 3.5px;
+      display: flex; gap: 3px; box-shadow: 0 6px 18px rgba(90, 75, 55, 0.10);
     }
     .pill-btn {
-      background: transparent; border: none; color: #94a3b8; padding: 5.5px 11px; border-radius: 9px;
+      background: transparent; border: none; color: #64748b; padding: 5.5px 11px; border-radius: 9px;
       font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .pill-btn:hover { color: #f8fafc; background: rgba(255, 255, 255, 0.08); }
-    .pill-btn.active { background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); color: #ffffff; box-shadow: 0 2px 10px rgba(37, 99, 235, 0.45); }
+    .pill-btn:hover { color: #0f172a; background: rgba(241, 245, 249, 0.85); }
+    .pill-btn.active { background: linear-gradient(135deg, #059669 0%, #0d9488 100%); color: #ffffff; box-shadow: 0 2px 10px rgba(13, 148, 136, 0.40); }
     .pill-btn.time-dawn.active { background: linear-gradient(135deg, #f43f5e 0%, #fb923c 100%); }
-    .pill-btn.time-day.active { background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%); }
-    .pill-btn.time-dusk.active { background: linear-gradient(135deg, #d97706 0%, #9333ea 100%); }
-    .pill-btn.time-night.active { background: linear-gradient(135deg, #312e81 0%, #4338ca 100%); }
+    .pill-btn.time-day.active { background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%); }
+    .pill-btn.time-dusk.active { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
+    .pill-btn.time-night.active { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); }
     .btn-glass {
-      background: rgba(12, 18, 32, 0.82); backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 13px; padding: 7px 13px;
-      font-size: 12.5px; font-weight: 600; color: #e2e8f0; cursor: pointer; display: flex; align-items: center; gap: 6px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); transition: all 0.2s ease;
+      background: rgba(255, 253, 248, 0.90); backdrop-filter: blur(14px);
+      border: 1px solid rgba(226, 218, 203, 0.85); border-radius: 13px; padding: 7px 13px;
+      font-size: 12.5px; font-weight: 600; color: #1e293b; cursor: pointer; display: flex; align-items: center; gap: 6px;
+      box-shadow: 0 6px 18px rgba(90, 75, 55, 0.10); transition: all 0.2s ease;
     }
-    .btn-glass:hover { background: rgba(30, 41, 59, 0.95); border-color: rgba(255, 255, 255, 0.3); transform: translateY(-1px); color: #fff; }
-    .btn-glass.active { background: rgba(59, 130, 246, 0.38); border-color: #60a5fa; color: #93c5fd; }
-    .btn-build-mode { background: linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.4) 100%); border: 1px solid #34d399; color: #a7f3d0; }
+    .btn-glass:hover { background: #ffffff; border-color: #cbd5e1; transform: translateY(-1px); color: #0f172a; }
+    .btn-glass.active { background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #047857; }
+    .btn-build-mode { background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.25) 100%); border: 1px solid #10b981; color: #047857; }
     .btn-build-mode.editing { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; box-shadow: 0 0 16px rgba(16, 185, 129, 0.5); }
 
     /* Zoom HUD Pill */
     .zoom-hud {
-      background: rgba(12, 18, 32, 0.82); backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 13px; padding: 4px 8px;
-      display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-size: 12px; font-weight: 600;
+      background: rgba(255, 253, 248, 0.90); backdrop-filter: blur(14px);
+      border: 1px solid rgba(226, 218, 203, 0.85); border-radius: 13px; padding: 4px 8px;
+      display: flex; align-items: center; gap: 6px; color: #475569; font-size: 12px; font-weight: 600;
     }
     .zoom-btn {
-      background: rgba(255,255,255,0.08); border: none; color: #f8fafc; width: 24px; height: 24px;
+      background: rgba(241, 245, 249, 0.9); border: 1px solid #e2e8f0; color: #0f172a; width: 24px; height: 24px;
       border-radius: 7px; cursor: pointer; font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center;
     }
-    .zoom-btn:hover { background: rgba(56, 189, 248, 0.35); }
+    .zoom-btn:hover { background: rgba(16, 185, 129, 0.25); color: #047857; }
 
     /* Minimap */
     .minimap-container {
       position: absolute; top: 128px; right: 18px; width: 136px; height: 136px; border-radius: 50%;
-      background: rgba(12, 18, 32, 0.78); backdrop-filter: blur(12px);
-      border: 2px solid rgba(148, 163, 184, 0.35); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      background: rgba(255, 253, 248, 0.88); backdrop-filter: blur(12px);
+      border: 2px solid rgba(13, 148, 136, 0.45); box-shadow: 0 10px 25px rgba(90, 75, 55, 0.18);
       pointer-events: auto; overflow: hidden; display: flex; align-items: center; justify-content: center;
     }
     #minimap-canvas { width: 100%; height: 100%; border-radius: 50%; }
     .minimap-label {
-      position: absolute; bottom: 6px; font-size: 10px; font-weight: 700; color: #e2e8f0;
-      background: rgba(12, 18, 32, 0.85); padding: 2px 8px; border-radius: 8px;
+      position: absolute; bottom: 6px; font-size: 10px; font-weight: 700; color: #0f172a;
+      background: rgba(255, 253, 248, 0.94); border: 1px solid rgba(226, 218, 203, 0.85); padding: 2px 8px; border-radius: 8px;
     }
     #prompt-toast {
       position: absolute; bottom: 92px; left: 50%; transform: translateX(-50%) translateY(20px);
-      background: rgba(12, 18, 32, 0.88); backdrop-filter: blur(16px); border: 1px solid rgba(251, 191, 36, 0.55);
-      border-radius: 24px; padding: 11px 22px; color: #fef3c7; font-size: 13.5px; font-weight: 600;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), 0 0 15px rgba(245, 158, 11, 0.25);
+      background: rgba(255, 253, 248, 0.95); backdrop-filter: blur(16px); border: 1.5px solid #059669;
+      border-radius: 24px; padding: 11px 22px; color: #0f172a; font-size: 13.5px; font-weight: 600;
+      box-shadow: 0 12px 30px rgba(90, 75, 55, 0.18), 0 0 15px rgba(16, 185, 129, 0.22);
       display: flex; align-items: center; gap: 10px; opacity: 0; pointer-events: none;
       transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 40;
     }
     #prompt-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; cursor: pointer; }
-    #prompt-toast .glow-key { background: #f59e0b; color: #1e1b4b; padding: 3px 9px; border-radius: 8px; font-size: 11px; font-weight: 800; }
+    #prompt-toast .glow-key { background: #059669; color: #ffffff; padding: 3px 9px; border-radius: 8px; font-size: 11px; font-weight: 800; }
 
     /* Build Mode Palette */
     #build-palette {
@@ -469,7 +469,7 @@
     <div class="bottom-bar">
       <div class="help-hint" id="normal-help">
         <div>🖱️ <strong>左鍵點擊地面</strong>：走動 ｜ <strong>滑鼠滾輪 / 雙指開合</strong>：RO 無段遠近縮放視角 ｜ <strong>右鍵拖曳</strong>：旋轉視角</div>
-        <div>🌸 <strong>靠近聖壇 / 清溪拱橋</strong>：按 <kbd>Space</kbd> 獻花、點燈與追思留言</div>
+        <div>🌸 <strong>水岸木棧道 / 聖壇 / 拱橋</strong>：按 <kbd>Space</kbd> 獻花祈思 ｜ 湖邊按 <kbd>F</kbd> 撒餌餵魚</div>
       </div>
       <div class="help-hint" id="build-help" style="display:none; background:rgba(6,78,59,0.85); border:1px solid #34d399;">
         <div style="color:#6ee7b7; font-weight:700;">🔨 庭園小鎮建造模式啟用中</div>
@@ -479,6 +479,7 @@
       <div class="action-bar" id="normal-action-bar">
         <button class="help-toggle-btn" onclick="toggleMobileHelp()" title="操作說明">❔</button>
         <button class="action-btn" onclick="petGoldenDog()" style="border-color: rgba(251, 191, 36, 0.55);"><span class="icon">🐕</span><span>摸摸豆豆</span></button>
+        <button id="btn-feed-fish" class="action-btn" onclick="feedKoi()" title="向水中錦鯉撒餌 (快捷鍵 F)" style="border-color: rgba(16, 185, 129, 0.55);"><span class="icon">🐟</span><span>撒餌餵魚</span></button>
         <button class="action-btn" onclick="triggerAction('pray')"><span class="icon">🙏</span><span>祈願</span></button>
         <button class="action-btn" onclick="triggerAction('flower')"><span class="icon">🌸</span><span>獻花</span></button>
         <button class="action-btn" onclick="triggerAction('sit')"><span class="icon">🧘</span><span id="sit-btn-text">坐下休息</span></button>
@@ -1643,26 +1644,335 @@
       floatingLanterns.push({ mesh: padGroup, baseX: pondCenterX + dx, baseZ: pondCenterZ + dz, phase: idx * 0.9 });
     });
 
-    // Articulated Koi Fish swimming beneath the semi-transparent water surface
-    const koiBodyMat = new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xea580c, emissiveIntensity: 0.25, roughness: 0.2 });
-    const koiWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25 });
-    const koiList = [];
-    for (let k = 0; k < 6; k++) {
-      const koi = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), k % 2 === 0 ? koiBodyMat : koiWhiteMat);
-      body.scale.set(0.75, 0.55, 2.3);
-      koi.add(body);
-      const spot = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 8), koiBodyMat);
-      spot.position.set(0, 0.05, 0.06);
-      spot.scale.set(0.8, 0.5, 1.2);
-      koi.add(spot);
-      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.32, 4), koiBodyMat);
-      tail.rotation.x = Math.PI / 2;
-      tail.position.z = -0.38;
-      koi.add(tail);
-      scene.add(koi);
-      koiList.push({ mesh: koi, tail, angle: k * 1.05, radius: 1.4 + (k % 3) * 0.95, speed: 0.48 + k * 0.07 });
+    /* =======================================================================
+       5.1 Lakeside Wooden Dock & Pier (集集王·湖光小鎮風格水岸木棧道)
+       ======================================================================= */
+    const dockStartX = 3.2;
+    const dockEndX = 7.8;
+    const dockCenterZ = -3.0;
+    const dockPlanks = [];
+    const dockLanterns = [];
+
+    function isPointOnDock(x, z) {
+      return (x >= 2.95 && x <= 8.05 && z >= -4.25 && z <= -1.75);
     }
+
+    function createLakesideDock() {
+      const dg = new THREE.Group();
+      const dockWoodMat = new THREE.MeshStandardMaterial({
+        map: barkPBR.map,
+        normalMap: barkPBR.normalMap,
+        color: 0x9a6538,
+        roughness: 0.72
+      });
+      const darkPilingMat = new THREE.MeshStandardMaterial({
+        color: 0x3d2314,
+        roughness: 0.88
+      });
+      const ropeMat = new THREE.MeshStandardMaterial({
+        color: 0xd97706,
+        roughness: 0.95
+      });
+      const lanternPaperMat = new THREE.MeshStandardMaterial({
+        color: 0xffedd5,
+        emissive: 0xfbbf24,
+        emissiveIntensity: 0.65,
+        roughness: 0.3
+      });
+
+      // Under-dock support beams
+      [-0.85, 0.85].forEach(offsetZ => {
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(dockEndX - dockStartX + 0.3, 0.16, 0.18), darkPilingMat);
+        beam.position.set((dockStartX + dockEndX) * 0.5, 0.05, dockCenterZ + offsetZ);
+        beam.castShadow = true;
+        beam.receiveShadow = true;
+        dg.add(beam);
+      });
+
+      // 14 Timber Planks
+      const plankCount = 14;
+      const step = (dockEndX - dockStartX) / (plankCount - 1);
+      for (let i = 0; i < plankCount; i++) {
+        const px = dockStartX + i * step;
+        const plank = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.08, 2.38), dockWoodMat);
+        plank.position.set(px, 0.13, dockCenterZ);
+        plank.castShadow = true;
+        plank.receiveShadow = true;
+        dg.add(plank);
+        dockPlanks.push(plank);
+      }
+
+      // 6 Vertical Pilings / Mooring Posts driven into the lake bed
+      const pilingCoords = [
+        [3.3, dockCenterZ - 1.25], [3.3, dockCenterZ + 1.25],
+        [5.5, dockCenterZ - 1.25], [5.5, dockCenterZ + 1.25],
+        [7.8, dockCenterZ - 1.25], [7.8, dockCenterZ + 1.25],
+      ];
+      pilingCoords.forEach(([px, pz]) => {
+        const piling = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 1.4, 10), darkPilingMat);
+        piling.position.set(px, 0.13 + 0.25, pz);
+        piling.castShadow = true;
+        piling.receiveShadow = true;
+        dg.add(piling);
+
+        // Rope coils wrapped around piling tops
+        const ropeCoil = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.035, 6, 12), ropeMat);
+        ropeCoil.rotation.x = Math.PI / 2;
+        ropeCoil.position.set(px, 0.13 + 0.72, pz);
+        dg.add(ropeCoil);
+
+        // Hanging warm paper lanterns at the pier end
+        if (px >= 7.6) {
+          const larm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.35), darkPilingMat);
+          const armDir = pz > dockCenterZ ? -1 : 1;
+          larm.position.set(px - 0.05, 0.13 + 0.88, pz + armDir * 0.18);
+          dg.add(larm);
+
+          const lantern = new THREE.Group();
+          const lanternBody = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.28, 10), lanternPaperMat);
+          lantern.add(lanternBody);
+          const cap = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.08, 10), darkPilingMat);
+          cap.position.y = 0.17;
+          lantern.add(cap);
+          const halo = createGlowSprite('#f59e0b', 1.4);
+          halo.position.y = 0.02;
+          lantern.add(halo);
+          lanternHalos.push(halo);
+
+          lantern.position.set(px - 0.05, 0.13 + 0.65, pz + armDir * 0.32);
+          dg.add(lantern);
+          dockLanterns.push(lantern);
+        }
+      });
+
+      // Rustic wooden rope safety rails along north & south sides
+      [-1.22, 1.22].forEach(rz => {
+        const railLen = dockEndX - dockStartX;
+        const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, railLen, 8), ropeMat);
+        rope.rotation.z = Math.PI / 2;
+        rope.position.set((dockStartX + dockEndX) * 0.5, 0.13 + 0.52, dockCenterZ + rz);
+        dg.add(rope);
+      });
+
+      // Cozy pier-head wooden stool & fishing basket (箱庭感治癒小細節)
+      const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.26, 8), dockWoodMat);
+      stool.position.set(7.35, 0.13 + 0.13, dockCenterZ - 0.65);
+      stool.castShadow = true;
+      dg.add(stool);
+
+      const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.32, 8), ropeMat);
+      basket.position.set(7.35, 0.13 + 0.16, dockCenterZ + 0.65);
+      basket.castShadow = true;
+      dg.add(basket);
+
+      scene.add(dg);
+    }
+    createLakesideDock();
+
+    /* =======================================================================
+       5.2 Articulated Koi Fish (8 Iconic Species with Fluttering Fins & Swimming AI)
+       ======================================================================= */
+    const koiList = [];
+    const koiSpecies = [
+      { name: 'Kohaku (紅白)', baseColor: 0xffffff, spotColor: 0xdc2626, emissive: 0xb91c1c, hasSpots: true, finColor: 0xffffff },
+      { name: 'Taisho Sanke (大正三色)', baseColor: 0xffffff, spotColor: 0xe11d48, sumiColor: 0x1e293b, emissive: 0xbe123c, hasSpots: true, finColor: 0xffffff },
+      { name: 'Yamabuki Ogon (山吹黃金)', baseColor: 0xf59e0b, spotColor: 0xfbbf24, emissive: 0xd97706, hasSpots: false, finColor: 0xfde68a, metalness: 0.35 },
+      { name: 'Tancho (丹頂)', baseColor: 0xf8fafc, spotColor: 0xef4444, emissive: 0xb91c1c, isTancho: true, finColor: 0xffffff },
+      { name: 'Asagi (淺黃)', baseColor: 0x334155, spotColor: 0xf97316, emissive: 0xc2410c, hasSpots: true, finColor: 0xfb923c },
+      { name: 'Showa Sanshoku (昭和三色)', baseColor: 0x0f172a, spotColor: 0xef4444, sumiColor: 0xffffff, emissive: 0x991b1b, hasSpots: true, finColor: 0xffffff },
+      { name: 'Matsuba Gold (金松葉)', baseColor: 0xd97706, spotColor: 0x78350f, emissive: 0xb45309, hasSpots: false, finColor: 0xfde047 },
+      { name: 'Shiro Utsuri (白寫)', baseColor: 0x18181b, spotColor: 0xf4f4f5, emissive: 0x000000, hasSpots: true, finColor: 0xffffff }
+    ];
+
+    koiSpecies.forEach((spec, k) => {
+      const koi = new THREE.Group();
+      const baseMat = new THREE.MeshStandardMaterial({
+        color: spec.baseColor,
+        emissive: spec.emissive,
+        emissiveIntensity: 0.22,
+        roughness: 0.22,
+        metalness: spec.metalness || 0.05
+      });
+      const spotMat = new THREE.MeshStandardMaterial({
+        color: spec.spotColor,
+        roughness: 0.25
+      });
+      const finMat = new THREE.MeshStandardMaterial({
+        color: spec.finColor,
+        roughness: 0.3,
+        transparent: true,
+        opacity: 0.85
+      });
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+
+      // Torpedo streamlined body
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 10), baseMat);
+      body.scale.set(0.72, 0.52, 2.4);
+      koi.add(body);
+
+      // Cute tiny obsidian eyes
+      [-0.10, 0.10].forEach(ex => {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.024, 6, 6), eyeMat);
+        eye.position.set(ex, 0.03, 0.32);
+        koi.add(eye);
+      });
+
+      // Distinct species markings
+      if (spec.isTancho) {
+        // Iconic circular red crown on forehead
+        const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.02, 10), spotMat);
+        crown.position.set(0, 0.095, 0.16);
+        crown.rotation.x = 0.2;
+        koi.add(crown);
+      } else if (spec.hasSpots) {
+        // Organic colorful patches
+        const spot1 = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 8), spotMat);
+        spot1.position.set(0.03, 0.06, 0.08);
+        spot1.scale.set(0.85, 0.55, 1.3);
+        koi.add(spot1);
+
+        if (spec.sumiColor) {
+          const sumiMat = new THREE.MeshStandardMaterial({ color: spec.sumiColor, roughness: 0.3 });
+          const sumiSpot = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), sumiMat);
+          sumiSpot.position.set(-0.04, 0.065, -0.16);
+          sumiSpot.scale.set(0.7, 0.45, 1.1);
+          koi.add(sumiSpot);
+        }
+      }
+
+      // Dorsal Fin along back
+      const dorsal = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.24, 4), finMat);
+      dorsal.rotation.x = -Math.PI / 3;
+      dorsal.position.set(0, 0.10, -0.05);
+      koi.add(dorsal);
+
+      // Articulated Left & Right Pectoral Fins (finL, finR)
+      const finGeo = new THREE.ConeGeometry(0.07, 0.26, 4);
+      const finL = new THREE.Mesh(finGeo, finMat);
+      finL.position.set(0.14, -0.02, 0.12);
+      finL.rotation.set(0.2, 0, -Math.PI / 3);
+      koi.add(finL);
+
+      const finR = new THREE.Mesh(finGeo, finMat);
+      finR.position.set(-0.14, -0.02, 0.12);
+      finR.rotation.set(0.2, 0, Math.PI / 3);
+      koi.add(finR);
+
+      // Tail Stem & Flowing Caudal Fin (tailPivot)
+      const tailPivot = new THREE.Group();
+      tailPivot.position.set(0, 0, -0.40);
+      const tailFin = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.38, 4), finMat);
+      tailFin.rotation.x = Math.PI / 2;
+      tailFin.scale.set(0.3, 1.0, 1.4);
+      tailPivot.add(tailFin);
+      koi.add(tailPivot);
+
+      scene.add(koi);
+      koiList.push({
+        mesh: koi,
+        tail: tailPivot,
+        finL, finR,
+        species: spec.name,
+        angle: k * (Math.PI * 2 / 8),
+        radius: 1.5 + (k % 4) * 0.85,
+        speed: 0.42 + (k % 3) * 0.08,
+        swimPhase: k * 1.3,
+        posX: pondCenterX,
+        posZ: pondCenterZ,
+        targetFood: null,
+        nibbleTimer: 0
+      });
+    });
+
+    /* =======================================================================
+       5.3 Fish Feeding Mechanics & Web Audio Splash Effects (撒餌與音效)
+       ======================================================================= */
+    const fishFoodPellets = [];
+    const foodGeo = new THREE.DodecahedronGeometry(0.045, 0);
+    const foodMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      roughness: 0.35,
+      emissive: 0xd97706,
+      emissiveIntensity: 0.4
+    });
+
+    function playWaterSplashSFX() {
+      if (!audioCtx || !isAudioPlaying) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(620 + Math.random() * 220, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(280, audioCtx.currentTime + 0.14);
+        gain.gain.setValueAtTime(0.045, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.20);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.20);
+      } catch (e) {}
+    }
+
+    function isNearWaterOrDock() {
+      if (isPointOnDock(player.position.x, player.position.z)) return true;
+      const d = Math.hypot(player.position.x - pondCenterX, player.position.z - pondCenterZ);
+      return d < 6.8;
+    }
+
+    window.feedKoi = function(targetX, targetZ) {
+      ensureAudioCtx();
+      if (typeof targetX !== 'number' || typeof targetZ !== 'number') {
+        if (isPointOnDock(player.position.x, player.position.z)) {
+          targetX = player.position.x + 1.6;
+          targetZ = player.position.z + (Math.random() - 0.5) * 1.5;
+        } else {
+          const dirX = pondCenterX - player.position.x;
+          const dirZ = pondCenterZ - player.position.z;
+          const len = Math.hypot(dirX, dirZ) || 1;
+          targetX = player.position.x + (dirX / len) * 3.2;
+          targetZ = player.position.z + (dirZ / len) * 3.2;
+        }
+      }
+
+      // Keep food target inside lake pond bounds
+      targetX = Math.max(3.8, Math.min(13.8, targetX));
+      targetZ = Math.max(-6.5, Math.min(0.5, targetZ));
+
+      const count = 6;
+      const startX = player.position.x;
+      const startY = player.position.y + 0.95;
+      const startZ = player.position.z;
+
+      for (let i = 0; i < count; i++) {
+        const mesh = new THREE.Mesh(foodGeo, foodMat);
+        mesh.position.set(startX, startY, startZ);
+        scene.add(mesh);
+
+        const destX = targetX + (Math.random() - 0.5) * 1.5;
+        const destZ = targetZ + (Math.random() - 0.5) * 1.5;
+        fishFoodPellets.push({
+          mesh,
+          startX, startY, startZ,
+          targetX: destX, targetZ: destZ,
+          arcHeight: 0.85 + Math.random() * 0.4,
+          progress: 0,
+          duration: 0.6 + Math.random() * 0.25,
+          landed: false,
+          life: 8.5 + Math.random() * 2.5,
+          bobPhase: Math.random() * Math.PI * 2
+        });
+      }
+
+      playWaterSplashSFX();
+
+      if (companionDog) {
+        companionDog.excitedTimer = 4.5;
+        playDogBarkSound();
+      }
+
+      window.triggerEmote('🐟 撒下美味魚食 · 錦鯉悠游爭食 ✨');
+      window.triggerHaptics([40, 30, 60], 0.6, 0.8, 280, '🐟 撒餌餵魚回饋');
+    };
 
     // Japanese Vermilion Lacquered Arched Bridge (跨越蜿蜒溪流與荷花灣的朱紅拱橋)
     const bridgeCenterX = getRiverCenterX(0);
@@ -3590,7 +3900,7 @@
 
     window.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
-      if (e.target.closest('.glass-panel') || e.target.closest('.modal-card') || e.target.closest('.build-palette')) return;
+      if (e.target.closest('.glass-panel') || e.target.closest('.modal-card') || e.target.closest('.build-palette') || e.target.closest('#joystick-zone')) return;
 
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -3645,15 +3955,30 @@
         return;
       }
 
-      const groundHits = raycaster.intersectObjects([ground, roadNS, roadEW, plazaDisk]);
+      const groundHits = raycaster.intersectObjects([ground, roadNS, roadEW, plazaDisk, ...dockPlanks]);
       if (groundHits.length > 0) {
         const pt = groundHits[0].point;
-        if (isPointInRiver(pt.x, pt.z, -0.2) && Math.abs(pt.z) > 1.85) return;
+        if (isPointInRiver(pt.x, pt.z, -0.2) && Math.abs(pt.z) > 1.85 && !isPointOnDock(pt.x, pt.z)) return;
         pendingMonument = null;
         targetPos.set(pt.x, 0, pt.z);
         targetRing.position.set(pt.x, 0.11, pt.z);
         targetRing.material.color.setHex(0x38bdf8);
         isMoving = true;
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (e.code === 'KeyF') {
+        window.feedKoi();
+      } else if (e.code === 'Space') {
+        if (isNearWaterOrDock()) {
+          window.feedKoi();
+        } else {
+          window.triggerAction('pray');
+        }
+      } else if (e.code === 'KeyB') {
+        window.toggleBuildMode();
       }
     });
 
@@ -3892,6 +4217,14 @@
     // Expose Automated CI/CD Diagnostic & E2E Inspection Hook
     window.__REIEN_DIAG__ = {
       getState: () => ({
+        themeStyle: 'koi-lake-town',
+        dockPresent: true,
+        dockPos: { x: (dockStartX + dockEndX) * 0.5, z: dockCenterZ },
+        koiFishCount: koiList.length,
+        fishFoodCount: fishFoodPellets.length,
+        isNearWaterOrDock: isNearWaterOrDock(),
+        joyActive: joyActive,
+        joyVec: { x: joyVecX, y: joyVecY },
         timeOfDay: currentTimeOfDay,
         weather: currentWeather,
         playerPos: { x: player.position.x, y: player.position.y, z: player.position.z },
@@ -3915,12 +4248,69 @@
         hasVibrateAPI: typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function',
         connectedGamepads: (typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean).map(g => ({ id: g.id, hasVibration: !!(g.vibrationActuator && g.vibrationActuator.playEffect) })) : [])
       }),
-      teleportPlayer: (x, z) => {
+      teleportPlayer: (x, z, snap = false) => {
         isMoving = false;
-        player.position.set(x, 0, z);
-        targetPos.set(x, 0, z);
-      }
+        const groundY = isPointOnDock(x, z) ? 0.14 : 0;
+        player.position.set(x, groundY, z);
+        targetPos.set(x, groundY, z);
+        if (snap) {
+          const baseDist = 24.5 * cameraZoom;
+          const pitchFactor = cameraZoom < 0.8 ? (0.55 + cameraZoom * 0.35) : 0.82;
+          const camX = player.position.x + Math.cos(cameraYaw) * baseDist;
+          const camZ = player.position.z + Math.sin(cameraYaw) * baseDist;
+          const camY = player.position.y + baseDist * pitchFactor;
+          camera.position.set(camX, camY, camZ);
+          camera.lookAt(player.position.x, player.position.y + 1.05, player.position.z);
+          updateOcclusion(0.016, true);
+        }
+      },
+      feedFish: (tx, tz) => window.feedKoi(tx, tz),
+      setJoystickVector: (x, y) => { joyVecX = x; joyVecY = y; }
     };
+
+    function updateOcclusion(dt, snap = false) {
+      const camXZ = new THREE.Vector2(camera.position.x, camera.position.z);
+      const plrXZ = new THREE.Vector2(player.position.x, player.position.z);
+      const segVec = new THREE.Vector2().subVectors(plrXZ, camXZ);
+      const segLenSq = segVec.lengthSq();
+
+      occludableObjects.forEach(item => {
+        const objXZ = new THREE.Vector2(item.group.position.x, item.group.position.z);
+        const distToPlayer = objXZ.distanceTo(plrXZ);
+        const distToCam = objXZ.distanceTo(camXZ);
+
+        let tProj = 0;
+        if (segLenSq > 0.001) {
+          tProj = THREE.MathUtils.clamp(
+            new THREE.Vector2().subVectors(objXZ, camXZ).dot(segVec) / segLenSq,
+            0.0, 1.0
+          );
+        }
+        const closestPt = new THREE.Vector2().copy(camXZ).addScaledVector(segVec, tProj);
+        const distToRay = objXZ.distanceTo(closestPt);
+
+        let targetAlpha = 1.0;
+        if (distToPlayer < item.radius * 0.85) {
+          targetAlpha = item.type === 'house' ? 0.16 : 0.14;
+        } else if (tProj > 0.08 && tProj < 0.98 && distToRay < item.radius * 0.82) {
+          targetAlpha = 0.15;
+        } else if (distToCam < 6.5) {
+          targetAlpha = 0.12;
+        }
+
+        if (snap) {
+          item.currentAlpha = targetAlpha;
+        } else {
+          item.currentAlpha += (targetAlpha - item.currentAlpha) * Math.min(1.0, Math.max(0.18, dt * 10.0));
+        }
+        item.materials.forEach(mat => {
+          mat.opacity = item.currentAlpha;
+          if (!mat.map || mat === item.materials[0]) {
+            mat.depthWrite = item.currentAlpha > 0.85;
+          }
+        });
+      });
+    }
 
     function animate() {
       requestAnimationFrame(animate);
@@ -3953,19 +4343,92 @@
         gb.mesh.rotation.z = Math.sin(t * 2.2 + gb.phase) * 0.09;
       });
 
-      // Lotus pads & Koi fish swimming in the river bay
+      // Lotus pads in the river bay
       floatingLanterns.forEach(fl => {
         fl.mesh.position.y = 0.09 + Math.sin(t * 2.0 + fl.phase) * 0.014;
       });
+
+      // Food pellets update (parabolic throw arc & water floating)
+      for (let i = fishFoodPellets.length - 1; i >= 0; i--) {
+        const p = fishFoodPellets[i];
+        if (!p.landed) {
+          p.progress += dt / p.duration;
+          const pr = Math.min(1.0, p.progress);
+          const px = p.startX + (p.targetX - p.startX) * pr;
+          const pz = p.startZ + (p.targetZ - p.startZ) * pr;
+          const py = (p.startY + (0.08 - p.startY) * pr) + Math.sin(pr * Math.PI) * p.arcHeight;
+          p.mesh.position.set(px, py, pz);
+          if (p.progress >= 1.0) {
+            p.landed = true;
+            playWaterSplashSFX();
+          }
+        } else {
+          p.life -= dt;
+          p.mesh.position.y = 0.08 + Math.sin(t * 4.0 + p.bobPhase) * 0.015;
+          if (p.life <= 0) {
+            scene.remove(p.mesh);
+            fishFoodPellets.splice(i, 1);
+          }
+        }
+      }
+
+      // Articulated Koi Swimming & Interactive Feeding AI
       koiList.forEach(k => {
-        k.angle += dt * k.speed;
-        const kx = pondCenterX + Math.cos(k.angle) * k.radius;
-        const kz = pondCenterZ + Math.sin(k.angle * 1.2) * (k.radius * 0.85);
-        const dx = -Math.sin(k.angle) * k.radius * k.speed;
-        const dz = Math.cos(k.angle * 1.2) * 1.2 * (k.radius * 0.85) * k.speed;
-        k.mesh.position.set(kx, -0.04, kz);
-        k.mesh.rotation.y = Math.atan2(dx, dz);
-        k.tail.rotation.y = Math.sin(t * 12.0 + k.angle) * 0.42;
+        // Find nearest active landed food pellet
+        let nearestFood = null;
+        let minDist = 5.2;
+        fishFoodPellets.forEach(fp => {
+          if (fp.landed) {
+            const fd = Math.hypot(k.mesh.position.x - fp.targetX, k.mesh.position.z - fp.targetZ);
+            if (fd < minDist) {
+              minDist = fd;
+              nearestFood = fp;
+            }
+          }
+        });
+
+        let swimSpeed = k.speed;
+        if (nearestFood) {
+          swimSpeed = k.speed * 1.6;
+          const dirX = nearestFood.targetX - k.posX;
+          const dirZ = nearestFood.targetZ - k.posZ;
+          const d = Math.hypot(dirX, dirZ);
+          if (d > 0.16) {
+            k.posX += (dirX / d) * swimSpeed * dt;
+            k.posZ += (dirZ / d) * swimSpeed * dt;
+          } else {
+            // Fish nibbles the food!
+            const fIdx = fishFoodPellets.indexOf(nearestFood);
+            if (fIdx !== -1) {
+              scene.remove(nearestFood.mesh);
+              fishFoodPellets.splice(fIdx, 1);
+              k.nibbleTimer = 0.7;
+              playWaterSplashSFX();
+            }
+          }
+        } else {
+          // Orbit peacefully around pond
+          k.angle += dt * k.speed;
+          k.posX = pondCenterX + Math.cos(k.angle) * k.radius;
+          k.posZ = pondCenterZ + Math.sin(k.angle * 1.15) * (k.radius * 0.88);
+        }
+
+        const dx = k.posX - k.mesh.position.x;
+        const dz = k.posZ - k.mesh.position.z;
+        k.mesh.position.x = k.posX;
+        k.mesh.position.z = k.posZ;
+        k.mesh.position.y = -0.03 + (k.nibbleTimer > 0 ? 0.06 : 0) + Math.sin(t * 3.0 + k.swimPhase) * 0.012;
+        if (k.nibbleTimer > 0) k.nibbleTimer -= dt;
+
+        if (Math.hypot(dx, dz) > 0.001) {
+          const targetHeading = Math.atan2(dx, dz);
+          k.mesh.rotation.y = targetHeading;
+        }
+
+        // Tail undulating swish & fluttering pectoral fins
+        k.tail.rotation.y = Math.sin(t * 14.0 + k.swimPhase) * 0.48;
+        k.finL.rotation.z = -Math.PI / 3 + Math.sin(t * 12.0 + k.swimPhase) * 0.18;
+        k.finR.rotation.z = Math.PI / 3 - Math.sin(t * 12.0 + k.swimPhase) * 0.18;
       });
 
       // Virtual Joystick & Gamepad (Bluetooth & USB) Polling
@@ -4026,14 +4489,16 @@
         const speed = 5.5;
         const nextX = player.position.x + moveX * speed * dt;
         const nextZ = player.position.z + moveZ * speed * dt;
-        if (!isPointInRiver(nextX, nextZ, -0.2) || Math.abs(nextZ) <= 1.85) {
+        if (!isPointInRiver(nextX, nextZ, -0.2) || Math.abs(nextZ) <= 1.85 || isPointOnDock(nextX, nextZ)) {
           player.position.x = nextX;
           player.position.z = nextZ;
           targetPos.copy(player.position);
           targetRing.position.set(nextX, 0.11, nextZ);
         }
         let groundY = 0;
-        if (Math.abs(player.position.z) < 1.85 && Math.abs(player.position.x - bridgeCenterX) < 4.2) {
+        if (isPointOnDock(player.position.x, player.position.z)) {
+          groundY = 0.14;
+        } else if (Math.abs(player.position.z) < 1.85 && Math.abs(player.position.x - bridgeCenterX) < 4.2) {
           const bt = (player.position.x - bridgeCenterX) / 8.4;
           groundY = Math.max(0, Math.cos(bt * Math.PI) * 0.92);
         }
@@ -4055,7 +4520,9 @@
           player.position.z += (dz / dist) * speed * dt;
 
           let groundY = 0;
-          if (Math.abs(player.position.z) < 1.85 && Math.abs(player.position.x - bridgeCenterX) < 4.2) {
+          if (isPointOnDock(player.position.x, player.position.z)) {
+            groundY = 0.14;
+          } else if (Math.abs(player.position.z) < 1.85 && Math.abs(player.position.x - bridgeCenterX) < 4.2) {
             const bt = (player.position.x - bridgeCenterX) / 8.4;
             groundY = Math.max(0, Math.cos(bt * Math.PI) * 0.92);
           }
@@ -4143,50 +4610,8 @@
       camera.position.set(camX, camY, camZ);
       camera.lookAt(player.position.x, player.position.y + 1.05, player.position.z);
 
-      // RO-Style See-Through Occlusion Transparency (When Player Walks Under Trees or Enters Indoor Buildings, or Object Blocks Camera->Player Ray)
-      const camXZ = new THREE.Vector2(camera.position.x, camera.position.z);
-      const plrXZ = new THREE.Vector2(player.position.x, player.position.z);
-      const segVec = new THREE.Vector2().subVectors(plrXZ, camXZ);
-      const segLenSq = segVec.lengthSq();
-
-      occludableObjects.forEach(item => {
-        const objXZ = new THREE.Vector2(item.group.position.x, item.group.position.z);
-        const distToPlayer = objXZ.distanceTo(plrXZ);
-        const distToCam = objXZ.distanceTo(camXZ);
-
-        // Project object center onto Camera->Player segment in XZ plane
-        let tProj = 0;
-        if (segLenSq > 0.001) {
-          tProj = THREE.MathUtils.clamp(
-            new THREE.Vector2().subVectors(objXZ, camXZ).dot(segVec) / segLenSq,
-            0.0, 1.0
-          );
-        }
-        const closestPt = new THREE.Vector2().copy(camXZ).addScaledVector(segVec, tProj);
-        const distToRay = objXZ.distanceTo(closestPt);
-
-        let targetAlpha = 1.0;
-        // 1. Player is directly underneath tree canopy or inside building interior
-        if (distToPlayer < item.radius * 0.85) {
-          targetAlpha = item.type === 'house' ? 0.16 : 0.14;
-        }
-        // 2. Tree or building is between Camera and Player, blocking line of sight
-        else if (tProj > 0.08 && tProj < 0.98 && distToRay < item.radius * 0.82) {
-          targetAlpha = 0.15;
-        }
-        // 3. Camera lens is right inside a tree canopy when zoomed in
-        else if (distToCam < 6.5) {
-          targetAlpha = 0.12;
-        }
-
-        item.currentAlpha += (targetAlpha - item.currentAlpha) * 0.16;
-        item.materials.forEach(mat => {
-          mat.opacity = item.currentAlpha;
-          if (!mat.map || mat === item.materials[0]) {
-            mat.depthWrite = item.currentAlpha > 0.85;
-          }
-        });
-      });
+      // RO-Style See-Through Occlusion Transparency
+      updateOcclusion(dt, false);
 
       // Weather Particle Updates
       if (petals.visible) {
@@ -4283,6 +4708,30 @@
             flashEl.style.opacity = '0';
             applyEnvironment();
           }, 150);
+        }
+      }
+
+      // Dynamic Proximity HUD Toast (湖光木棧道 / 聖壇 / 錦鯉餵食)
+      const promptToast = document.getElementById('prompt-toast');
+      const promptText = document.getElementById('prompt-text');
+      if (promptToast && promptText) {
+        if (isNearWaterOrDock()) {
+          promptText.innerHTML = '🐟 靠近湖光木棧道 · 按 <kbd>F</kbd> 撒餌餵魚嬉戲';
+          promptToast.classList.add('show');
+          promptToast.onclick = () => window.feedKoi();
+        } else {
+          let nearMonument = null;
+          monuments.forEach(m => {
+            const dist = Math.hypot(player.position.x - m.position.x, player.position.z - m.position.z);
+            if (dist < 3.2) nearMonument = m;
+          });
+          if (nearMonument) {
+            promptText.innerHTML = `🌸 靠近【${nearMonument.userData.name}】點擊進行追思祈念`;
+            promptToast.classList.add('show');
+            promptToast.onclick = () => openMemorialModal(nearMonument.userData);
+          } else {
+            promptToast.classList.remove('show');
+          }
         }
       }
 
