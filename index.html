@@ -79,6 +79,7 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
     body, html {
@@ -693,7 +694,7 @@
       <div class="action-bar" id="normal-action-bar">
         <button class="help-toggle-btn" onclick="toggleMobileHelp()" title="操作說明">❔</button>
         <button class="action-btn" onclick="petGoldenDog()" style="border-color: rgba(251, 191, 36, 0.55);"><span class="icon">🐕</span><span>摸摸豆豆</span></button>
-        <button id="btn-pet-cat" class="action-btn" onclick="petGingerCat()" title="探望踩奶小橘" style="border-color: rgba(249, 115, 22, 0.55);"><span class="icon">🐾</span><span>探望小橘</span></button>
+        <button id="btn-pet-cat" class="action-btn" onclick="petGingerCat()" title="探望踩奶條碼 (Mabi)" style="border-color: rgba(249, 115, 22, 0.55);"><span class="icon">🐾</span><span>探望條碼</span></button>
         <button id="btn-feed-fish" class="action-btn" onclick="feedKoi()" title="向水中錦鯉撒餌 (快捷鍵 F)" style="border-color: rgba(16, 185, 129, 0.55);"><span class="icon">🐟</span><span>撒餌餵魚</span></button>
         <button class="action-btn" onclick="triggerAction('pray')"><span class="icon">🙏</span><span>祈願</span></button>
         <button class="action-btn" onclick="triggerAction('flower')"><span class="icon">🌸</span><span>獻花</span></button>
@@ -3176,9 +3177,10 @@
     const companionDog = createGoldenRetrieverDog(-2.6, 3.2);
 
     /* =======================================================================
-       8.6 Interactive 3D Kneading Ginger Kitten ("小橘" / "條碼")
+       8.6 Interactive 3D Kneading Mabi Kitten ("條碼" / Mabi - 303/999)
+           - Loads high-detail sculpted 3D Mabi model (`assets/models/mabi_cat.glb`)
            - Tiered Velvet Sheen Physical Fur Material (MeshPhysicalMaterial with sheen)
-           - Articulated Front Kneading ("踩奶 / 踏踏") Paws with Pink Toe Bean Pads
+           - Articulated Front Kneading ("踩奶 / 踏踏") Paws with Toe Bean Pads & 303/999 ID Tag
            - Soft Cushion Bed with Contact Indentation & Heart Particle Emitters
        ======================================================================= */
     function createTabbyFurTexture() {
@@ -3186,24 +3188,24 @@
       c.width = 256; c.height = 256;
       const ctx = c.getContext('2d');
 
-      // Warm ginger orange gradient base
+      // Mabi's golden-brown / sandy-amber mackerel tabby base ("條碼")
       const grad = ctx.createLinearGradient(0, 0, 256, 256);
-      grad.addColorStop(0, '#f97316');
-      grad.addColorStop(0.5, '#ea580c');
-      grad.addColorStop(1, '#c2410c');
+      grad.addColorStop(0, '#c88b50');
+      grad.addColorStop(0.5, '#b87e48');
+      grad.addColorStop(1, '#9a6434');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 256, 256);
 
-      // Creamy golden flecks
-      ctx.fillStyle = 'rgba(254, 215, 170, 0.26)';
+      // Creamy agouti flecks
+      ctx.fillStyle = 'rgba(245, 230, 211, 0.25)';
       for (let i = 0; i < 40; i++) {
         ctx.beginPath();
         ctx.arc(Math.random() * 256, Math.random() * 256, 6 + Math.random() * 12, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Classic Tabby / Tiger "條碼" Dark Ginger Stripes
-      ctx.fillStyle = '#7c2d12';
+      // Mabi's Mackerel Tabby ("條碼紋") Dark Espresso Stripes
+      ctx.fillStyle = '#241409';
       for (let i = 0; i < 16; i++) {
         const y = 14 + i * 15;
         ctx.beginPath();
@@ -3215,7 +3217,6 @@
         ctx.fill();
       }
 
-      // Subtle fur noise
       const imgData = ctx.getImageData(0, 0, 256, 256);
       const d = imgData.data;
       for (let i = 0; i < d.length; i += 4) {
@@ -3230,6 +3231,27 @@
       tex.wrapS = THREE.RepeatWrapping;
       tex.wrapT = THREE.RepeatWrapping;
       return tex;
+    }
+
+    function createMabiTagTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 160;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(0, 0, 128, 160);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3, 3, 122, 154);
+      ctx.fillStyle = '#dc2626';
+      ctx.font = 'bold 44px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('303', 64, 66);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(18, 82); ctx.lineTo(110, 82); ctx.stroke();
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText('999', 64, 134);
+      return new THREE.CanvasTexture(c);
     }
 
     function createCushionTexture() {
@@ -3254,13 +3276,14 @@
 
     const catTabbyTex = createTabbyFurTexture();
     const catCushionTex = createCushionTexture();
+    const mabiTagTex = createMabiTagTexture();
 
     // High quality velvet fur sheen physical material (Three.js r128 sheen Color)
     const catFurPhysicalMat = new THREE.MeshPhysicalMaterial({
       map: catTabbyTex,
       roughness: 0.82,
       metalness: 0.02,
-      sheen: new THREE.Color(0xffedd5),
+      sheen: new THREE.Color(0xf5e6d3),
       clearcoat: 0.05
     });
     // Performance standard material
@@ -3270,9 +3293,12 @@
       metalness: 0.02
     });
 
-    const catCreamMat = new THREE.MeshStandardMaterial({ color: 0xffedd5, roughness: 0.72 });
-    const catPinkMat = new THREE.MeshStandardMaterial({ color: 0xfb7185, roughness: 0.45 });
-    const catDarkMat = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.3 });
+    const catCreamMat = new THREE.MeshStandardMaterial({ color: 0xf5e6d3, roughness: 0.72 });
+    const catPinkMat = new THREE.MeshStandardMaterial({ color: 0x5c3d36, roughness: 0.45 }); // Mabi's mauve/dusty-rose toe beans
+    const catEmeraldEyeMat = new THREE.MeshStandardMaterial({ color: 0x8bc34a, roughness: 0.2 });
+    const catDarkMat = new THREE.MeshStandardMaterial({ color: 0x1a120b, roughness: 0.3 });
+    const catCollarRedMat = new THREE.MeshStandardMaterial({ color: 0x9e1a1e, roughness: 0.5 });
+    const catTagMat = new THREE.MeshStandardMaterial({ map: mabiTagTex, roughness: 0.3 });
     const catCushionMat = new THREE.MeshStandardMaterial({ map: catCushionTex, roughness: 0.85 });
 
     function createGingerKitten(x, z) {
@@ -3294,7 +3320,6 @@
       cushionRim.castShadow = true;
       cushionGroup.add(cushionRim);
 
-      // Left & Right kneading indentation pads (subtly deform under paws)
       const cushionIndentLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.02, 10), catCushionMat);
       cushionIndentLeft.position.set(-0.11, 0.085, 0.20);
       cushionGroup.add(cushionIndentLeft);
@@ -3305,33 +3330,39 @@
 
       catGroup.add(cushionGroup);
 
-      // Kitten Torso & Cream Chest
+      // Immediate fallback Mabi rig (replaced seamlessly as soon as assets/models/mabi_cat.glb loads)
+      const fallbackRig = new THREE.Group();
+      rig.add(fallbackRig);
+
       const activeFurMat = catFurStandardMat;
       const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.52, 14), activeFurMat);
       torso.rotation.x = Math.PI / 2 - 0.12;
       torso.position.set(0, 0.24, -0.04);
       torso.castShadow = true;
-      rig.add(torso);
+      fallbackRig.add(torso);
 
-      const chest = new THREE.Mesh(new THREE.SphereGeometry(0.20, 14, 14), catCreamMat);
+      const chest = new THREE.Mesh(new THREE.SphereGeometry(0.20, 14, 14), activeFurMat);
       chest.position.set(0, 0.25, 0.16);
       chest.castShadow = true;
-      rig.add(chest);
+      fallbackRig.add(chest);
 
-      // Hind Legs (resting Sphinx pose beside the body)
+      // Mabi's Red-Black Collar & 303/999 Tag on fallback rig
+      const collarMesh = new THREE.Mesh(new THREE.TorusGeometry(0.155, 0.02, 10, 24), catCollarRedMat);
+      collarMesh.rotation.x = Math.PI / 2 + 0.25;
+      collarMesh.position.set(0, 0.34, 0.22);
+      fallbackRig.add(collarMesh);
+
+      const tagMesh = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.08, 0.008), catTagMat);
+      tagMesh.position.set(0, 0.26, 0.37);
+      fallbackRig.add(tagMesh);
+
       [-0.18, 0.18].forEach(hx => {
         const hindThigh = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 10), activeFurMat);
         hindThigh.position.set(hx, 0.15, -0.15);
         hindThigh.castShadow = true;
-        rig.add(hindThigh);
-
-        const hindPaw = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), catCreamMat);
-        hindPaw.position.set(hx > 0 ? hx - 0.03 : hx + 0.03, 0.09, -0.02);
-        hindPaw.castShadow = true;
-        rig.add(hindPaw);
+        fallbackRig.add(hindThigh);
       });
 
-      // Front Kneading Limbs (Articulated for the iconic "踩奶" biscuit making animation)
       const leftFrontLegPivot = new THREE.Group();
       leftFrontLegPivot.position.set(-0.11, 0.27, 0.16);
       const leftUpperLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.042, 0.16, 10), activeFurMat);
@@ -3341,23 +3372,11 @@
 
       const leftPawPivot = new THREE.Group();
       leftPawPivot.position.set(0, -0.14, 0.02);
-      const leftMittenPaw = new THREE.Mesh(new THREE.SphereGeometry(0.052, 10, 10), catCreamMat);
+      const leftMittenPaw = new THREE.Mesh(new THREE.SphereGeometry(0.052, 10, 10), activeFurMat);
       leftMittenPaw.castShadow = true;
       leftPawPivot.add(leftMittenPaw);
-
-      // Pink Toe Bean Pads underneath front paws (iconic detail from reference video!)
-      const leftPadCenter = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), catPinkMat);
-      leftPadCenter.position.set(0, -0.045, 0);
-      leftPadCenter.scale.set(1.2, 0.4, 1.2);
-      leftPawPivot.add(leftPadCenter);
-      [[-0.022, 0.024], [-0.008, 0.034], [0.008, 0.034], [0.022, 0.024]].forEach(([bx, bz]) => {
-        const toeBean = new THREE.Mesh(new THREE.SphereGeometry(0.009, 6, 6), catPinkMat);
-        toeBean.position.set(bx, -0.046, bz);
-        toeBean.scale.set(1, 0.5, 1);
-        leftPawPivot.add(toeBean);
-      });
       leftFrontLegPivot.add(leftPawPivot);
-      rig.add(leftFrontLegPivot);
+      fallbackRig.add(leftFrontLegPivot);
 
       const rightFrontLegPivot = new THREE.Group();
       rightFrontLegPivot.position.set(0.11, 0.27, 0.16);
@@ -3368,95 +3387,42 @@
 
       const rightPawPivot = new THREE.Group();
       rightPawPivot.position.set(0, -0.14, 0.02);
-      const rightMittenPaw = new THREE.Mesh(new THREE.SphereGeometry(0.052, 10, 10), catCreamMat);
+      const rightMittenPaw = new THREE.Mesh(new THREE.SphereGeometry(0.052, 10, 10), activeFurMat);
       rightMittenPaw.castShadow = true;
       rightPawPivot.add(rightMittenPaw);
-
-      const rightPadCenter = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), catPinkMat);
-      rightPadCenter.position.set(0, -0.045, 0);
-      rightPadCenter.scale.set(1.2, 0.4, 1.2);
-      rightPawPivot.add(rightPadCenter);
-      [[-0.022, 0.024], [-0.008, 0.034], [0.008, 0.034], [0.022, 0.024]].forEach(([bx, bz]) => {
-        const toeBean = new THREE.Mesh(new THREE.SphereGeometry(0.009, 6, 6), catPinkMat);
-        toeBean.position.set(bx, -0.046, bz);
-        toeBean.scale.set(1, 0.5, 1);
-        rightPawPivot.add(toeBean);
-      });
       rightFrontLegPivot.add(rightPawPivot);
-      rig.add(rightFrontLegPivot);
+      fallbackRig.add(rightFrontLegPivot);
 
-      // Kitten Head Group (Chibi rounded head, perked ears with pink lining, cute muzzle)
       const headGroup = new THREE.Group();
       headGroup.position.set(0, 0.44, 0.24);
-
       const skull = new THREE.Mesh(new THREE.SphereGeometry(0.19, 16, 16), activeFurMat);
       skull.castShadow = true;
       headGroup.add(skull);
 
-      // Cream Cheek Puffs & Chin
-      [-0.05, 0.05].forEach(cx => {
-        const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 10), catCreamMat);
-        cheek.position.set(cx, -0.06, 0.15);
-        headGroup.add(cheek);
-      });
-      const chin = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 10), catCreamMat);
-      chin.position.set(0, -0.10, 0.13);
-      headGroup.add(chin);
-
-      // Sweet Pink Nose
-      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.026, 4), catPinkMat);
-      nose.rotation.x = Math.PI / 2;
-      nose.position.set(0, -0.03, 0.19);
-      headGroup.add(nose);
-
-      // Blissful Closed Purring Eyes (^ _ ^ arc)
       [-0.075, 0.075].forEach(ex => {
-        const eye = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.007, 6, 10, Math.PI), catDarkMat);
-        eye.rotation.x = -0.3;
-        eye.rotation.z = Math.PI;
-        eye.position.set(ex, 0.02, 0.165);
-        headGroup.add(eye);
+        const iris = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 10), catEmeraldEyeMat);
+        iris.position.set(ex, 0.02, 0.165);
+        headGroup.add(iris);
       });
 
-      // Perked Triangular Ears with Pink Inner Lining
       [-0.10, 0.10].forEach(ex => {
         const ear = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.13, 4), activeFurMat);
         ear.position.set(ex, 0.16, 0.03);
         ear.rotation.z = ex > 0 ? -0.28 : 0.28;
-        ear.rotation.x = -0.10;
-        ear.castShadow = true;
         headGroup.add(ear);
-
-        const innerEar = new THREE.Mesh(new THREE.ConeGeometry(0.042, 0.09, 4), catPinkMat);
-        innerEar.position.set(ex, 0.15, 0.05);
-        innerEar.rotation.z = ex > 0 ? -0.28 : 0.28;
-        innerEar.rotation.x = -0.12;
-        headGroup.add(innerEar);
       });
+      fallbackRig.add(headGroup);
 
-      // Thin White Whiskers
-      const whiskerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
-      [-1, 1].forEach(side => {
-        [-0.015, 0.015].forEach(wy => {
-          const whisker = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.14, 4), whiskerMat);
-          whisker.rotation.z = Math.PI / 2 + side * 0.12 + wy * 3;
-          whisker.position.set(side * 0.12, -0.06 + wy, 0.16);
-          headGroup.add(whisker);
-        });
-      });
-      rig.add(headGroup);
-
-      // Lazy Tail Pivot & Curved Mesh
       const tailPivot = new THREE.Group();
       tailPivot.position.set(0, 0.18, -0.26);
       const tailMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.028, 0.26, 8), activeFurMat);
       tailMesh.rotation.x = -Math.PI / 3;
       tailMesh.position.set(0, 0.08, -0.10);
       tailPivot.add(tailMesh);
-      const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), catCreamMat);
+      const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), catDarkMat);
       tailTip.position.set(0, 0.18, -0.21);
       tailPivot.add(tailTip);
-      rig.add(tailPivot);
+      fallbackRig.add(tailPivot);
 
       // Warm Amber Aura Ring on ground
       const catRing = new THREE.Mesh(
@@ -3490,7 +3456,6 @@
         });
       }
 
-      // Quality switcher hook
       function setQuality(mode) {
         const m = mode === 'quality' ? catFurPhysicalMat : catFurStandardMat;
         torso.material = m;
@@ -3501,10 +3466,10 @@
       }
 
       catGroup.position.set(x, 0, z);
-      catGroup.userData = { isCat: true, name: '小橘 (踩奶小貓)' };
+      catGroup.userData = { isCat: true, name: '條碼 Mabi (303/999)' };
       scene.add(catGroup);
 
-      return {
+      const catObj = {
         group: catGroup,
         rig,
         headGroup,
@@ -3520,8 +3485,55 @@
         setQuality,
         excitedTimer: 0,
         baseX: x,
-        baseZ: z
+        baseZ: z,
+        glbLoaded: false,
+        glbHead: null,
+        glbPawL: null,
+        glbPawR: null,
+        glbTag: null,
+        glbTail: null
       };
+
+      // Asynchronously load the sculpted Blender 5.3 Mabi GLB (`assets/models/mabi_cat.glb`)
+      if (typeof THREE.GLTFLoader === 'function') {
+        const loader = new THREE.GLTFLoader();
+        loader.load('assets/models/mabi_cat.glb', (gltf) => {
+          const model = gltf.scene;
+          model.scale.setScalar(0.42);
+          model.position.set(0, 0.08, 0.04);
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+            if (child.name === 'Mabi_Cushion') {
+              child.visible = false; // We already have the interactive garden cushion
+            } else if (child.name === 'Mabi_Head') {
+              catObj.glbHead = child;
+              catObj.glbHeadBaseY = child.position.y;
+            } else if (child.name === 'Mabi_Paw_Left') {
+              catObj.glbPawL = child;
+              catObj.glbPawLBaseY = child.position.y;
+            } else if (child.name === 'Mabi_Paw_Right') {
+              catObj.glbPawR = child;
+              catObj.glbPawRBaseY = child.position.y;
+            } else if (child.name === 'Mabi_Tag_303_999') {
+              catObj.glbTag = child;
+            } else if (child.name === 'Mabi_Tail') {
+              catObj.glbTail = child;
+            }
+          });
+          fallbackRig.visible = false;
+          cushionIndentLeft.visible = false;
+          cushionIndentRight.visible = false;
+          rig.add(model);
+          catObj.glbLoaded = true;
+        }, undefined, () => {
+          // Keep fallbackRig visible if offline or GLB missing
+        });
+      }
+
+      return catObj;
     }
 
     const companionCat = createGingerKitten(2.5, 3.4);
@@ -4543,8 +4555,8 @@
       companionCat.excitedTimer = 4.0;
       companionCat.spawnHearts();
       playCatPurrAndMeowSound();
-      window.triggerEmote('🐾 呼嚕嚕～小橘舒服地踏踏踩奶中 ❤️');
-      window.triggerHaptics([40, 50, 40, 50, 60], 0.65, 0.75, 300, '🐾 摸摸小橘・呼嚕踩奶震動回饋！');
+      window.triggerEmote('🐾 呼嚕嚕～條碼 (Mabi) 舒服地踏踏踩奶中 ❤️');
+      window.triggerHaptics([40, 50, 40, 50, 60], 0.65, 0.75, 300, '🐾 摸摸條碼・呼嚕踩奶震動回饋！');
     };
 
     window.toggleMobileHelp = function() {
@@ -6154,8 +6166,30 @@
           companionCat.cushionIndentRight.scale.y = 1.0 - Math.max(0, rightKnead) * 0.45;
         }
 
+        // Also animate sculpted 3D Mabi GLB parts when loaded
+        if (companionCat.glbLoaded) {
+          if (companionCat.glbPawL) {
+            companionCat.glbPawL.position.y = companionCat.glbPawLBaseY + Math.max(0, leftKnead) * 0.045;
+            companionCat.glbPawL.rotation.x = -leftKnead * 0.16;
+          }
+          if (companionCat.glbPawR) {
+            companionCat.glbPawR.position.y = companionCat.glbPawRBaseY + Math.max(0, rightKnead) * 0.045;
+            companionCat.glbPawR.rotation.x = -rightKnead * 0.16;
+          }
+          if (companionCat.glbHead) {
+            companionCat.glbHead.position.y = companionCat.glbHeadBaseY + Math.sin(t * kneadRate) * 0.008;
+            companionCat.glbHead.rotation.z = Math.sin(t * (kneadRate * 0.5)) * 0.035;
+          }
+          if (companionCat.glbTag) {
+            companionCat.glbTag.rotation.z = Math.sin(t * kneadRate) * 0.07;
+          }
+          if (companionCat.glbTail) {
+            companionCat.glbTail.rotation.y = Math.sin(t * 2.2) * 0.12;
+          }
+        }
+
         // Gentle spine purr breathing bob
-        companionCat.rig.position.y = Math.abs(Math.sin(t * kneadRate)) * 0.012;
+        companionCat.rig.position.y = Math.abs(Math.sin(t * kneadRate)) * 0.010;
 
         // Head blissful tilt
         companionCat.headGroup.rotation.z = Math.sin(t * (kneadRate * 0.5)) * 0.06;
@@ -6165,12 +6199,12 @@
         companionCat.tailPivot.rotation.z = Math.sin(t * 2.2) * 0.42;
         companionCat.tailPivot.rotation.x = -0.28 + Math.cos(t * 2.2) * 0.12;
 
-        // Turn head toward player when nearby
+        // Turn toward player when nearby
         if (dPlayerCat < 4.2) {
           const targetCatYaw = Math.atan2(player.position.x - companionCat.group.position.x, player.position.z - companionCat.group.position.z);
-          companionCat.headGroup.rotation.y += (targetCatYaw - companionCat.headGroup.rotation.y) * 0.08;
+          companionCat.rig.rotation.y += (targetCatYaw - companionCat.rig.rotation.y) * 0.08;
         } else {
-          companionCat.headGroup.rotation.y += (0 - companionCat.headGroup.rotation.y) * 0.05;
+          companionCat.rig.rotation.y += (0 - companionCat.rig.rotation.y) * 0.05;
         }
 
         // Update floating heart particles
