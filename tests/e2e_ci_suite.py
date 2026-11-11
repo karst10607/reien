@@ -341,11 +341,23 @@ def test_tc13_performance_and_fps(ws, screenshot_dir=None):
         # Gate on render-loop liveness instead: at least one rendered frame in the
         # window, and if that window was too short to catch two, confirm continued
         # progress in a second window rather than failing on a meaningless FPS.
+        if stats['frames'] < 1:
+            for _ in range(10):
+                time.sleep(1.0)
+                stats = eval_js(ws, "return window.__REIEN_DIAG__.getRenderStats();", timeout=5)
+                if stats['frames'] >= 1:
+                    break
         assert_true(stats['frames'] >= 1, f"Render loop never rendered a frame: {stats}")
         if stats['frames'] < 2:
             eval_js(ws, "window.__REIEN_DIAG__.resetRenderStats();", timeout=5)
             time.sleep(6.0)
             stats_more = eval_js(ws, "return window.__REIEN_DIAG__.getRenderStats();", timeout=5)
+            if stats_more['frames'] < 1:
+                for _ in range(10):
+                    time.sleep(1.0)
+                    stats_more = eval_js(ws, "return window.__REIEN_DIAG__.getRenderStats();", timeout=5)
+                    if stats_more['frames'] >= 1:
+                        break
             assert_true(stats_more['frames'] >= 1,
                         f"Render loop stalled under software rasterizer: {stats_more}")
             stats = stats_more
@@ -631,6 +643,24 @@ def run_browser_suite(screenshot_dir: str = None):
         assert_true(haptic_res['gamepadType'] == 'dual-rumble', "Gamepad effect must be dual-rumble")
         assert_true(haptic_res['dogExcited'], "Companion dog excitedTimer did not activate on petGoldenDog()")
         assert_true(haptic_res['toastShown'], "#haptic-toast was not shown on vibration")
+
+        # Also verify 3D Ginger Kitten ("小橘") petting, biscuit-kneading & purr haptics
+        cat_res = eval_js(ws, """
+            window.__vibrateCalls = [];
+            window.__gamepadPulses = [];
+            window.petGingerCat();
+            const st = window.__REIEN_DIAG__.getState();
+            return {
+                vibrateCount: window.__vibrateCalls.length,
+                gamepadCount: window.__gamepadPulses.length,
+                catExcited: st.catPos && st.catPos.excitedTimer > 0,
+                catPos: st.catPos
+            };
+        """)
+        assert_true(cat_res['vibrateCount'] >= 1, "navigator.vibrate was not triggered when petting cat")
+        assert_true(cat_res['gamepadCount'] >= 1, "Gamepad playEffect was not triggered for cat")
+        assert_true(cat_res['catExcited'], "Companion cat excitedTimer did not activate on petGingerCat()")
+        assert_true(cat_res['catPos'] is not None, "catPos was missing from diagnostic state")
         print("PASS")
 
         # -----------------------------------------------------------------

@@ -693,6 +693,7 @@
       <div class="action-bar" id="normal-action-bar">
         <button class="help-toggle-btn" onclick="toggleMobileHelp()" title="操作說明">❔</button>
         <button class="action-btn" onclick="petGoldenDog()" style="border-color: rgba(251, 191, 36, 0.55);"><span class="icon">🐕</span><span>摸摸豆豆</span></button>
+        <button id="btn-pet-cat" class="action-btn" onclick="petGingerCat()" title="探望踩奶小橘" style="border-color: rgba(249, 115, 22, 0.55);"><span class="icon">🐾</span><span>探望小橘</span></button>
         <button id="btn-feed-fish" class="action-btn" onclick="feedKoi()" title="向水中錦鯉撒餌 (快捷鍵 F)" style="border-color: rgba(16, 185, 129, 0.55);"><span class="icon">🐟</span><span>撒餌餵魚</span></button>
         <button class="action-btn" onclick="triggerAction('pray')"><span class="icon">🙏</span><span>祈願</span></button>
         <button class="action-btn" onclick="triggerAction('flower')"><span class="icon">🌸</span><span>獻花</span></button>
@@ -3175,6 +3176,357 @@
     const companionDog = createGoldenRetrieverDog(-2.6, 3.2);
 
     /* =======================================================================
+       8.6 Interactive 3D Kneading Ginger Kitten ("小橘" / "條碼")
+           - Tiered Velvet Sheen Physical Fur Material (MeshPhysicalMaterial with sheen)
+           - Articulated Front Kneading ("踩奶 / 踏踏") Paws with Pink Toe Bean Pads
+           - Soft Cushion Bed with Contact Indentation & Heart Particle Emitters
+       ======================================================================= */
+    function createTabbyFurTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+
+      // Warm ginger orange gradient base
+      const grad = ctx.createLinearGradient(0, 0, 256, 256);
+      grad.addColorStop(0, '#f97316');
+      grad.addColorStop(0.5, '#ea580c');
+      grad.addColorStop(1, '#c2410c');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 256, 256);
+
+      // Creamy golden flecks
+      ctx.fillStyle = 'rgba(254, 215, 170, 0.26)';
+      for (let i = 0; i < 40; i++) {
+        ctx.beginPath();
+        ctx.arc(Math.random() * 256, Math.random() * 256, 6 + Math.random() * 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Classic Tabby / Tiger "條碼" Dark Ginger Stripes
+      ctx.fillStyle = '#7c2d12';
+      for (let i = 0; i < 16; i++) {
+        const y = 14 + i * 15;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.bezierCurveTo(64, y + 4, 128, y - 6, 256, y + 2);
+        ctx.lineTo(256, y + 5);
+        ctx.bezierCurveTo(128, y - 2, 64, y + 8, 0, y + 4);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Subtle fur noise
+      const imgData = ctx.getImageData(0, 0, 256, 256);
+      const d = imgData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const n = (Math.random() - 0.5) * 16;
+        d[i] = Math.min(255, Math.max(0, d[i] + n));
+        d[i + 1] = Math.min(255, Math.max(0, d[i + 1] + n * 0.8));
+        d[i + 2] = Math.min(255, Math.max(0, d[i + 2] + n * 0.5));
+      }
+      ctx.putImageData(imgData, 0, 0);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    function createCushionTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.strokeStyle = '#fde68a';
+      ctx.lineWidth = 2;
+      for (let x = 0; x < 128; x += 8) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 128); ctx.stroke();
+      }
+      for (let y = 0; y < 128; y += 8) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(128, y); ctx.stroke();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    const catTabbyTex = createTabbyFurTexture();
+    const catCushionTex = createCushionTexture();
+
+    // High quality velvet fur sheen physical material (Three.js r128 sheen Color)
+    const catFurPhysicalMat = new THREE.MeshPhysicalMaterial({
+      map: catTabbyTex,
+      roughness: 0.82,
+      metalness: 0.02,
+      sheen: new THREE.Color(0xffedd5),
+      clearcoat: 0.05
+    });
+    // Performance standard material
+    const catFurStandardMat = new THREE.MeshStandardMaterial({
+      map: catTabbyTex,
+      roughness: 0.78,
+      metalness: 0.02
+    });
+
+    const catCreamMat = new THREE.MeshStandardMaterial({ color: 0xffedd5, roughness: 0.72 });
+    const catPinkMat = new THREE.MeshStandardMaterial({ color: 0xfb7185, roughness: 0.45 });
+    const catDarkMat = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.3 });
+    const catCushionMat = new THREE.MeshStandardMaterial({ map: catCushionTex, roughness: 0.85 });
+
+    function createGingerKitten(x, z) {
+      const catGroup = new THREE.Group();
+      const rig = new THREE.Group();
+      catGroup.add(rig);
+
+      // Fluffy cushion base & rim
+      const cushionGroup = new THREE.Group();
+      const cushionBase = new THREE.Mesh(new THREE.CylinderGeometry(0.50, 0.54, 0.08, 24), catCushionMat);
+      cushionBase.position.y = 0.04;
+      cushionBase.castShadow = true;
+      cushionBase.receiveShadow = true;
+      cushionGroup.add(cushionBase);
+
+      const cushionRim = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.065, 12, 24), catCushionMat);
+      cushionRim.rotation.x = Math.PI / 2;
+      cushionRim.position.y = 0.08;
+      cushionRim.castShadow = true;
+      cushionGroup.add(cushionRim);
+
+      // Left & Right kneading indentation pads (subtly deform under paws)
+      const cushionIndentLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.02, 10), catCushionMat);
+      cushionIndentLeft.position.set(-0.11, 0.085, 0.20);
+      cushionGroup.add(cushionIndentLeft);
+
+      const cushionIndentRight = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.02, 10), catCushionMat);
+      cushionIndentRight.position.set(0.11, 0.085, 0.20);
+      cushionGroup.add(cushionIndentRight);
+
+      catGroup.add(cushionGroup);
+
+      // Kitten Torso & Cream Chest
+      const activeFurMat = catFurStandardMat;
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.52, 14), activeFurMat);
+      torso.rotation.x = Math.PI / 2 - 0.12;
+      torso.position.set(0, 0.24, -0.04);
+      torso.castShadow = true;
+      rig.add(torso);
+
+      const chest = new THREE.Mesh(new THREE.SphereGeometry(0.20, 14, 14), catCreamMat);
+      chest.position.set(0, 0.25, 0.16);
+      chest.castShadow = true;
+      rig.add(chest);
+
+      // Hind Legs (resting Sphinx pose beside the body)
+      [-0.18, 0.18].forEach(hx => {
+        const hindThigh = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 10), activeFurMat);
+        hindThigh.position.set(hx, 0.15, -0.15);
+        hindThigh.castShadow = true;
+        rig.add(hindThigh);
+
+        const hindPaw = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), catCreamMat);
+        hindPaw.position.set(hx > 0 ? hx - 0.03 : hx + 0.03, 0.09, -0.02);
+        hindPaw.castShadow = true;
+        rig.add(hindPaw);
+      });
+
+      // Front Kneading Limbs (Articulated for the iconic "踩奶" biscuit making animation)
+      const leftFrontLegPivot = new THREE.Group();
+      leftFrontLegPivot.position.set(-0.11, 0.27, 0.16);
+      const leftUpperLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.042, 0.16, 10), activeFurMat);
+      leftUpperLeg.position.set(0, -0.07, 0);
+      leftUpperLeg.castShadow = true;
+      leftFrontLegPivot.add(leftUpperLeg);
+
+      const leftPawPivot = new THREE.Group();
+      leftPawPivot.position.set(0, -0.14, 0.02);
+      const leftMittenPaw = new THREE.Mesh(new THREE.SphereGeometry(0.052, 10, 10), catCreamMat);
+      leftMittenPaw.castShadow = true;
+      leftPawPivot.add(leftMittenPaw);
+
+      // Pink Toe Bean Pads underneath front paws (iconic detail from reference video!)
+      const leftPadCenter = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), catPinkMat);
+      leftPadCenter.position.set(0, -0.045, 0);
+      leftPadCenter.scale.set(1.2, 0.4, 1.2);
+      leftPawPivot.add(leftPadCenter);
+      [[-0.022, 0.024], [-0.008, 0.034], [0.008, 0.034], [0.022, 0.024]].forEach(([bx, bz]) => {
+        const toeBean = new THREE.Mesh(new THREE.SphereGeometry(0.009, 6, 6), catPinkMat);
+        toeBean.position.set(bx, -0.046, bz);
+        toeBean.scale.set(1, 0.5, 1);
+        leftPawPivot.add(toeBean);
+      });
+      leftFrontLegPivot.add(leftPawPivot);
+      rig.add(leftFrontLegPivot);
+
+      const rightFrontLegPivot = new THREE.Group();
+      rightFrontLegPivot.position.set(0.11, 0.27, 0.16);
+      const rightUpperLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.042, 0.16, 10), activeFurMat);
+      rightUpperLeg.position.set(0, -0.07, 0);
+      rightUpperLeg.castShadow = true;
+      rightFrontLegPivot.add(rightUpperLeg);
+
+      const rightPawPivot = new THREE.Group();
+      rightPawPivot.position.set(0, -0.14, 0.02);
+      const rightMittenPaw = new THREE.Mesh(new THREE.SphereGeometry(0.052, 10, 10), catCreamMat);
+      rightMittenPaw.castShadow = true;
+      rightPawPivot.add(rightMittenPaw);
+
+      const rightPadCenter = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), catPinkMat);
+      rightPadCenter.position.set(0, -0.045, 0);
+      rightPadCenter.scale.set(1.2, 0.4, 1.2);
+      rightPawPivot.add(rightPadCenter);
+      [[-0.022, 0.024], [-0.008, 0.034], [0.008, 0.034], [0.022, 0.024]].forEach(([bx, bz]) => {
+        const toeBean = new THREE.Mesh(new THREE.SphereGeometry(0.009, 6, 6), catPinkMat);
+        toeBean.position.set(bx, -0.046, bz);
+        toeBean.scale.set(1, 0.5, 1);
+        rightPawPivot.add(toeBean);
+      });
+      rightFrontLegPivot.add(rightPawPivot);
+      rig.add(rightFrontLegPivot);
+
+      // Kitten Head Group (Chibi rounded head, perked ears with pink lining, cute muzzle)
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 0.44, 0.24);
+
+      const skull = new THREE.Mesh(new THREE.SphereGeometry(0.19, 16, 16), activeFurMat);
+      skull.castShadow = true;
+      headGroup.add(skull);
+
+      // Cream Cheek Puffs & Chin
+      [-0.05, 0.05].forEach(cx => {
+        const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 10), catCreamMat);
+        cheek.position.set(cx, -0.06, 0.15);
+        headGroup.add(cheek);
+      });
+      const chin = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 10), catCreamMat);
+      chin.position.set(0, -0.10, 0.13);
+      headGroup.add(chin);
+
+      // Sweet Pink Nose
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.026, 4), catPinkMat);
+      nose.rotation.x = Math.PI / 2;
+      nose.position.set(0, -0.03, 0.19);
+      headGroup.add(nose);
+
+      // Blissful Closed Purring Eyes (^ _ ^ arc)
+      [-0.075, 0.075].forEach(ex => {
+        const eye = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.007, 6, 10, Math.PI), catDarkMat);
+        eye.rotation.x = -0.3;
+        eye.rotation.z = Math.PI;
+        eye.position.set(ex, 0.02, 0.165);
+        headGroup.add(eye);
+      });
+
+      // Perked Triangular Ears with Pink Inner Lining
+      [-0.10, 0.10].forEach(ex => {
+        const ear = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.13, 4), activeFurMat);
+        ear.position.set(ex, 0.16, 0.03);
+        ear.rotation.z = ex > 0 ? -0.28 : 0.28;
+        ear.rotation.x = -0.10;
+        ear.castShadow = true;
+        headGroup.add(ear);
+
+        const innerEar = new THREE.Mesh(new THREE.ConeGeometry(0.042, 0.09, 4), catPinkMat);
+        innerEar.position.set(ex, 0.15, 0.05);
+        innerEar.rotation.z = ex > 0 ? -0.28 : 0.28;
+        innerEar.rotation.x = -0.12;
+        headGroup.add(innerEar);
+      });
+
+      // Thin White Whiskers
+      const whiskerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+      [-1, 1].forEach(side => {
+        [-0.015, 0.015].forEach(wy => {
+          const whisker = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.14, 4), whiskerMat);
+          whisker.rotation.z = Math.PI / 2 + side * 0.12 + wy * 3;
+          whisker.position.set(side * 0.12, -0.06 + wy, 0.16);
+          headGroup.add(whisker);
+        });
+      });
+      rig.add(headGroup);
+
+      // Lazy Tail Pivot & Curved Mesh
+      const tailPivot = new THREE.Group();
+      tailPivot.position.set(0, 0.18, -0.26);
+      const tailMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.028, 0.26, 8), activeFurMat);
+      tailMesh.rotation.x = -Math.PI / 3;
+      tailMesh.position.set(0, 0.08, -0.10);
+      tailPivot.add(tailMesh);
+      const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), catCreamMat);
+      tailTip.position.set(0, 0.18, -0.21);
+      tailPivot.add(tailTip);
+      rig.add(tailPivot);
+
+      // Warm Amber Aura Ring on ground
+      const catRing = new THREE.Mesh(
+        new THREE.RingGeometry(0.44, 0.55, 24),
+        new THREE.MeshBasicMaterial({ color: 0xf97316, side: THREE.DoubleSide, transparent: true, opacity: 0.55 })
+      );
+      catRing.rotation.x = -Math.PI / 2;
+      catRing.position.y = 0.02;
+      catGroup.add(catRing);
+
+      // Heart Particle Pool (spawned when petted)
+      const heartParticles = [];
+      for (let i = 0; i < 6; i++) {
+        const hp = new THREE.Mesh(
+          new THREE.SphereGeometry(0.03, 6, 6),
+          new THREE.MeshBasicMaterial({ color: 0xf43f5e, transparent: true, opacity: 0 })
+        );
+        catGroup.add(hp);
+        heartParticles.push({ mesh: hp, life: 0, maxLife: 1.5, vx: 0, vy: 0, vz: 0 });
+      }
+
+      function spawnHearts() {
+        heartParticles.forEach(p => {
+          p.life = p.maxLife;
+          p.mesh.position.set((Math.random() - 0.5) * 0.25, 0.45 + Math.random() * 0.1, 0.15 + (Math.random() - 0.5) * 0.25);
+          p.vx = (Math.random() - 0.5) * 0.15;
+          p.vy = 0.35 + Math.random() * 0.25;
+          p.vz = (Math.random() - 0.5) * 0.15;
+          p.mesh.material.opacity = 0.9;
+          p.mesh.scale.setScalar(0.7 + Math.random() * 0.5);
+        });
+      }
+
+      // Quality switcher hook
+      function setQuality(mode) {
+        const m = mode === 'quality' ? catFurPhysicalMat : catFurStandardMat;
+        torso.material = m;
+        skull.material = m;
+        leftUpperLeg.material = m;
+        rightUpperLeg.material = m;
+        tailMesh.material = m;
+      }
+
+      catGroup.position.set(x, 0, z);
+      catGroup.userData = { isCat: true, name: '小橘 (踩奶小貓)' };
+      scene.add(catGroup);
+
+      return {
+        group: catGroup,
+        rig,
+        headGroup,
+        tailPivot,
+        leftFrontLegPivot,
+        leftPawPivot,
+        rightFrontLegPivot,
+        rightPawPivot,
+        cushionIndentLeft,
+        cushionIndentRight,
+        heartParticles,
+        spawnHearts,
+        setQuality,
+        excitedTimer: 0,
+        baseX: x,
+        baseZ: z
+      };
+    }
+
+    const companionCat = createGingerKitten(2.5, 3.4);
+
+    /* =======================================================================
        9. Weather Systems (Rain Ripples, Ground Splashes, Snow, Thunder, Petals)
        ======================================================================= */
     // Shared uniform for GPU Weather Particles
@@ -4126,6 +4478,75 @@
       window.triggerHaptics([85, 45, 130, 45, 95], 0.75, 0.9, 360, '📳 摸摸豆豆・手把與手機震動回饋中！');
     };
 
+    function playCatPurrAndMeowSound() {
+      ensureAudioCtx();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+
+      // Soft rhythmic purr (68Hz base with 24Hz amplitude modulation)
+      try {
+        const purrOsc = audioCtx.createOscillator();
+        const purrGain = audioCtx.createGain();
+        const purrMod = audioCtx.createOscillator();
+        const modGain = audioCtx.createGain();
+
+        purrOsc.type = 'triangle';
+        purrOsc.frequency.setValueAtTime(68, now);
+
+        purrMod.type = 'sine';
+        purrMod.frequency.setValueAtTime(24, now);
+        modGain.gain.setValueAtTime(0.04, now);
+        purrMod.connect(modGain);
+        modGain.connect(purrGain.gain);
+
+        purrGain.gain.setValueAtTime(0.06, now);
+        purrGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+        purrOsc.connect(purrGain);
+        purrGain.connect(audioCtx.destination);
+        purrOsc.start(now);
+        purrMod.start(now);
+        purrOsc.stop(now + 1.25);
+        purrMod.stop(now + 1.25);
+      } catch (e) { /* ignore audio graph error */ }
+
+      // Sweet gentle kitten chirp ("喵～")
+      try {
+        const meowOsc = audioCtx.createOscillator();
+        const meowGain = audioCtx.createGain();
+        meowOsc.type = 'sine';
+        const st = now + 0.12;
+        meowOsc.frequency.setValueAtTime(540, st);
+        meowOsc.frequency.exponentialRampToValueAtTime(760, st + 0.18);
+        meowOsc.frequency.exponentialRampToValueAtTime(620, st + 0.42);
+
+        meowGain.gain.setValueAtTime(0.001, st);
+        meowGain.gain.exponentialRampToValueAtTime(0.08, st + 0.14);
+        meowGain.gain.exponentialRampToValueAtTime(0.001, st + 0.48);
+
+        meowOsc.connect(meowGain);
+        meowGain.connect(audioCtx.destination);
+        meowOsc.start(st);
+        meowOsc.stop(st + 0.52);
+      } catch (e) { /* ignore */ }
+    }
+
+    window.petGingerCat = function() {
+      if (!companionCat) return;
+      const dist = Math.hypot(player.position.x - companionCat.group.position.x, player.position.z - companionCat.group.position.z);
+      if (dist > 2.0) {
+        targetPos.set(companionCat.group.position.x - 0.75, 0, companionCat.group.position.z - 0.75);
+        targetRing.position.set(targetPos.x, 0.11, targetPos.z);
+        targetRing.material.color.setHex(0xf97316);
+        isMoving = true;
+      }
+      companionCat.excitedTimer = 4.0;
+      companionCat.spawnHearts();
+      playCatPurrAndMeowSound();
+      window.triggerEmote('🐾 呼嚕嚕～小橘舒服地踏踏踩奶中 ❤️');
+      window.triggerHaptics([40, 50, 40, 50, 60], 0.65, 0.75, 300, '🐾 摸摸小橘・呼嚕踩奶震動回饋！');
+    };
+
     window.toggleMobileHelp = function() {
       const h = document.getElementById('normal-help');
       if (h) h.classList.toggle('mobile-open');
@@ -4304,6 +4725,15 @@
       if (dogHits.length > 0) {
         window.petGoldenDog();
         return;
+      }
+
+      // Click on Ginger Kitten ("小橘") to walk over, pet cat & trigger purring vibration!
+      if (companionCat) {
+        const catHits = raycaster.intersectObjects([companionCat.group], true);
+        if (catHits.length > 0) {
+          window.petGingerCat();
+          return;
+        }
       }
 
       const groundHits = raycaster.intersectObjects([ground, roadNS, roadEW, plazaDisk, ...dockPlanks]);
@@ -4563,6 +4993,15 @@
         mapCtx.stroke();
       }
 
+      if (companionCat) {
+        const [cx, cy] = toMap(companionCat.group.position.x, companionCat.group.position.z);
+        mapCtx.fillStyle = '#f97316';
+        mapCtx.beginPath(); mapCtx.arc(cx, cy, 4.5, 0, Math.PI * 2); mapCtx.fill();
+        mapCtx.strokeStyle = '#fed7aa';
+        mapCtx.lineWidth = 1.2;
+        mapCtx.stroke();
+      }
+
       const [px, py] = toMap(player.position.x, player.position.z);
       mapCtx.fillStyle = '#38bdf8';
       mapCtx.beginPath(); mapCtx.arc(px, py, 5, 0, Math.PI * 2); mapCtx.fill();
@@ -4700,6 +5139,10 @@
       renderFrameGate.setFPS(isPerf ? 30 : 60);
       renderFrameGate.reset();
 
+      if (typeof companionCat !== 'undefined' && companionCat && typeof companionCat.setQuality === 'function') {
+        companionCat.setQuality(currentQualityMode);
+      }
+
       if (persist) {
         try { localStorage.setItem(QUALITY_STORAGE_KEY, currentQualityMode); } catch (e) { /* ignore */ }
       }
@@ -4752,6 +5195,7 @@
         weather: currentWeather,
         playerPos: { x: player.position.x, y: player.position.y, z: player.position.z },
         dogPos: companionDog ? { x: companionDog.group.position.x, z: companionDog.group.position.z, excitedTimer: companionDog.excitedTimer } : null,
+        catPos: companionCat ? { x: companionCat.group.position.x, z: companionCat.group.position.z, excitedTimer: companionCat.excitedTimer } : null,
         lights: {
           mainInt: mainLight.intensity,
           mainColor: mainLight.color.getHex(),
@@ -5164,9 +5608,10 @@
     }
 
     function updateHallCamera(dt) {
+      if (!hallCamera) return;
       const o = hallOrbit;
       if (o.autoOrbit && !hallPointer.down) o.desiredTheta += dt * 0.1;
-      const k = 1 - Math.pow(0.0015, Math.min(dt, 0.05));
+      const k = dt >= 0.5 ? 1.0 : (1 - Math.pow(0.0015, Math.min(dt, 0.05)));
       o.theta += (o.desiredTheta - o.theta) * k;
       o.phi += (o.desiredPhi - o.phi) * k;
       o.radius += (o.desiredRadius - o.radius) * k;
@@ -5214,6 +5659,7 @@
         hallOrbit.target.copy(hallOrbit.desiredTarget);
         hallOrbit.radius = v.radius; hallOrbit.theta = v.theta; hallOrbit.phi = v.phi;
       }
+      updateHallCamera(snap ? 1.0 : 0.85);
       document.querySelectorAll('.hall-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === name));
     };
 
@@ -5226,6 +5672,7 @@
       renderer.shadowMap.enabled = true;
       hallKeyLight.shadow.needsUpdate = true;
       window.setHallView('overview', true);
+      updateHallCamera(1.0);
       const sub = document.getElementById('sync-status');
       if (sub) sub.innerText = '室內靈龕紀念廳 ‧ 點蠟燭・獻花・留言・轉換視角';
       if (window.triggerHaptics) window.triggerHaptics([30, 20, 30], 0.4, 0.5, 100, '進入室內靈龕紀念廳');
@@ -5678,6 +6125,69 @@
         if (dPlayer < 5.5) {
           const targetDogYaw = Math.atan2(player.position.x - companionDog.group.position.x, player.position.z - companionDog.group.position.z);
           companionDog.rig.rotation.y += (targetDogYaw - companionDog.rig.rotation.y) * 0.1;
+        }
+      }
+
+      // Interactive 3D Ginger Kitten ("小橘") Biscuit Kneading ("踩奶 / 踏踏") & Purr Animation
+      if (companionCat) {
+        const dPlayerCat = Math.hypot(player.position.x - companionCat.group.position.x, player.position.z - companionCat.group.position.z);
+        const isCatExcited = companionCat.excitedTimer > 0;
+        if (isCatExcited) companionCat.excitedTimer -= dt;
+
+        // Kneading frequency (stepping rhythm)
+        const kneadRate = isCatExcited ? 8.5 : 5.0;
+        const leftKnead = Math.sin(t * kneadRate);
+        const rightKnead = Math.sin(t * kneadRate + Math.PI);
+
+        // Articulated front paws alternating down & pressing into the cushion
+        companionCat.leftFrontLegPivot.rotation.x = 0.15 + leftKnead * 0.18;
+        companionCat.leftPawPivot.rotation.x = -0.12 - leftKnead * 0.32;
+        companionCat.leftPawPivot.position.y = -0.14 - Math.max(0, leftKnead) * 0.025;
+        if (companionCat.cushionIndentLeft) {
+          companionCat.cushionIndentLeft.scale.y = 1.0 - Math.max(0, leftKnead) * 0.45;
+        }
+
+        companionCat.rightFrontLegPivot.rotation.x = 0.15 + rightKnead * 0.18;
+        companionCat.rightPawPivot.rotation.x = -0.12 - rightKnead * 0.32;
+        companionCat.rightPawPivot.position.y = -0.14 - Math.max(0, rightKnead) * 0.025;
+        if (companionCat.cushionIndentRight) {
+          companionCat.cushionIndentRight.scale.y = 1.0 - Math.max(0, rightKnead) * 0.45;
+        }
+
+        // Gentle spine purr breathing bob
+        companionCat.rig.position.y = Math.abs(Math.sin(t * kneadRate)) * 0.012;
+
+        // Head blissful tilt
+        companionCat.headGroup.rotation.z = Math.sin(t * (kneadRate * 0.5)) * 0.06;
+        companionCat.headGroup.rotation.x = -0.06 + Math.sin(t * kneadRate) * 0.025;
+
+        // Lazy swaying tail
+        companionCat.tailPivot.rotation.z = Math.sin(t * 2.2) * 0.42;
+        companionCat.tailPivot.rotation.x = -0.28 + Math.cos(t * 2.2) * 0.12;
+
+        // Turn head toward player when nearby
+        if (dPlayerCat < 4.2) {
+          const targetCatYaw = Math.atan2(player.position.x - companionCat.group.position.x, player.position.z - companionCat.group.position.z);
+          companionCat.headGroup.rotation.y += (targetCatYaw - companionCat.headGroup.rotation.y) * 0.08;
+        } else {
+          companionCat.headGroup.rotation.y += (0 - companionCat.headGroup.rotation.y) * 0.05;
+        }
+
+        // Update floating heart particles
+        if (companionCat.heartParticles) {
+          companionCat.heartParticles.forEach(p => {
+            if (p.life > 0) {
+              p.life -= dt;
+              p.mesh.position.x += p.vx * dt;
+              p.mesh.position.y += p.vy * dt;
+              p.mesh.position.z += p.vz * dt;
+              const ratio = p.life / p.maxLife;
+              p.mesh.material.opacity = ratio * 0.85;
+              p.mesh.scale.setScalar(ratio * 0.9);
+            } else {
+              p.mesh.material.opacity = 0;
+            }
+          });
         }
       }
 
